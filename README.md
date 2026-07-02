@@ -1,16 +1,3 @@
-# sentri
-
-A new Flutter project.
-
-## Getting Started
-
-This project is a starting point for a Flutter application.
-
-A few resources to get you started if this is your first Flutter project:
-
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
-
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+# sentri-mobile-app
+An AI-powered mobile app that helps people identify scams, detect phishing attempts, learn cybersecurity and report cybercrime.
+>>>>>>> 94e67953789ad0e1ff55b6ecf7796e0b8504cdcc
