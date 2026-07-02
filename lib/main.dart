@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:sentri/screens/welcome_screen.dart';
+import 'screens/splash_screen.dart';
 
 void main() {
   runApp(const MyApp());
@@ -10,27 +12,10 @@ class MyApp extends StatelessWidget {
   // This widget is the root of your application.
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Sentri',
+    return const MaterialApp(
       debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
-        useMaterial3: true,
-      ),
-      home: Scaffold(
-        backgroundColor: Colors.indigo.shade900,
-        body: const Center(
-          child: Text(
-            'SENTRI',
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 40,
-              fontWeight: FontWeight.bold,
-              letterSpacing: 4,
-            ),
-          ),
-        ),
-      ),
+      title: 'Sentri',
+      home: WelcomeScreen(),
     );
   }
 }
