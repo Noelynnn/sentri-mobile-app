@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:sentri/screens/onboarding_flow.dart';
 import 'package:sentri/screens/welcome_screen.dart';
 import 'screens/splash_screen.dart';
 
@@ -15,7 +16,7 @@ class MyApp extends StatelessWidget {
     return const MaterialApp(
       debugShowCheckedModeBanner: false,
       title: 'Sentri',
-      home: SplashScreen(),
+      home: OnboardingFlow(),
     );
   }
 }
