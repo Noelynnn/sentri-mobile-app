@@ -16,6 +16,16 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
+  bool _isLoading = false;
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _emailController.dispose();
+    _passwordController.dispose();
+    _confirmPasswordController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -81,6 +91,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     if (value == null || value.isEmpty) {
                       return "Email is required";
                     }
+                    if (!value.contains("@")) {
+                      return "Enter a valid email";
+                    }
                     return null;
                   },
                 ),
@@ -109,10 +122,15 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     if (value == null || value.isEmpty) {
                       return "Password is required";
                     }
+                    if (value.length < 8) {
+                      return "Password must be at least 8 characters";
+                    }
+
                     return null;
                   },
                 ),
                 const SizedBox(height: 20),
+                //Confirm Password
                 TextFormField(
                   controller: _confirmPasswordController,
                   obscureText: _obscureConfirmPassword,
@@ -146,19 +164,52 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   },
                 ),
                 const SizedBox(height: 30),
+                //Sign up
                 ElevatedButton(
-                  onPressed: () {
-                    if (_formKey.currentState!.validate()) {}
-                  },
-                  child: const Text("Create Account"),
+                  onPressed: _isLoading
+                      ? null
+                      : () async {
+                          if (_formKey.currentState!.validate()) {
+                            setState(() {
+                              _isLoading = true;
+                            });
+
+                            await Future.delayed(
+                              const Duration(seconds: 2),
+                            );
+
+                            setState(() {
+                              _isLoading = false;
+                            });
+
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text("Account created successfully!"),
+                              ),
+                            );
+                            Navigator.pop(context);
+                          }
+                        },
+                  child: _isLoading
+                      ? const SizedBox(
+                          height: 20,
+                          width: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                          ),
+                        )
+                      : const Text("Create Account"),
                 ),
                 const SizedBox(height: 20),
+                //Login
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     const Text("Already have an account?"),
                     TextButton(
-                      onPressed: () {},
+                      onPressed: () {
+                        Navigator.pop(context);
+                      },
                       child: const Text("Log In"),
                     ),
                   ],
