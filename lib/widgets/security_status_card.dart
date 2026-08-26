@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import '../widgets/quick_action_card.dart';
 
 class SecurityStatusCard extends StatelessWidget {
-  const SecurityStatusCard({super.key});
+  final String status;
+  const SecurityStatusCard({super.key, required this.status});
 
   @override
   Widget build(BuildContext context) {
@@ -29,9 +30,9 @@ class SecurityStatusCard extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 8),
-          const Text(
-            "You're Protected ✓",
-            style: TextStyle(
+          Text(
+            status,
+            style: const TextStyle(
               fontSize: 20,
               fontWeight: FontWeight.bold,
             ),
@@ -45,7 +46,9 @@ class SecurityStatusCard extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 25),
-          const SecurityStatusCard(),
+          const SecurityStatusCard(
+            status: "You're Protected ✓",
+          ),
           const SizedBox(height: 30),
           Text(
             "Quick Actions",

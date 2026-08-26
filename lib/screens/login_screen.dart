@@ -16,7 +16,7 @@ class _LoginScreenState extends State<LoginScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
 
-  bool _obsecurePassword = true;
+  final bool _obsecurePassword = true;
   bool _isLoading = false;
 
   @override
@@ -137,20 +137,22 @@ class _LoginScreenState extends State<LoginScreen> {
                               });
 
                               await Future.delayed(const Duration(seconds: 2));
+                              if (!context.mounted) return;
+                              setState(() {
+                                _isLoading = false;
+                              });
 
                               final email = _emailController.text;
                               final password = _passwordController.text;
 
                               if (email == "test@sentri.com" &&
                                   password == "sentri123") {
-                                setState(() {
-                                  _isLoading = false;
-                                });
-
                                 Navigator.pushReplacement(
                                   context,
                                   MaterialPageRoute(
-                                    builder: (context) => const HomeScreen(),
+                                    builder: (context) => const HomeScreen(
+                                      userName: "Sentri User",
+                                    ),
                                   ),
                                 );
                               } else {

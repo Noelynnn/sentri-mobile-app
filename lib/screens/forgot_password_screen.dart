@@ -91,6 +91,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                             });
 
                             await Future.delayed(const Duration(seconds: 2));
+                            if (!context.mounted) return;
 
                             setState(() {
                               _isLoading = false;

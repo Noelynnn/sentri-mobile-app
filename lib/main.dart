@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:sentri/screens/check_scam_screen.dart';
 import 'package:sentri/screens/login_screen.dart';
 import 'package:sentri/screens/onboarding_flow.dart';
 import 'package:sentri/screens/register_screen.dart';
@@ -19,7 +20,7 @@ class MyApp extends StatelessWidget {
     return const MaterialApp(
       debugShowCheckedModeBanner: false,
       title: 'Sentri',
-      home: LoginScreen(),
+      home: CheckScamScreen(),
     );
   }
 }
