@@ -1,11 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:sentri/screens/check_scam_screen.dart';
-import 'package:sentri/screens/login_screen.dart';
-import 'package:sentri/screens/onboarding_flow.dart';
-import 'package:sentri/screens/register_screen.dart';
-import 'package:sentri/screens/welcome_screen.dart';
-import 'package:sentri/screens/splash_screen.dart';
-import 'package:sentri/screens/forgot_password_screen.dart';
+import 'screens/report_crime_screen.dart';
 
 void main() {
   runApp(const MyApp());
@@ -20,7 +14,7 @@ class MyApp extends StatelessWidget {
     return const MaterialApp(
       debugShowCheckedModeBanner: false,
       title: 'Sentri',
-      home: CheckScamScreen(),
+      home: ReportCrimeScreen(), // Change this to the desired initial screen
     );
   }
 }

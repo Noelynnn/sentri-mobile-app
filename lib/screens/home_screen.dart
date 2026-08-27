@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import '../widgets/quick_action_card.dart';
 import '../widgets/security_status_card.dart';
 import 'check_scam_screen.dart';
+import 'phishing_check_screen.dart';
+import 'learn_security_screen.dart';
+import 'report_crime_screen.dart';
 
 class HomeScreen extends StatelessWidget {
   final String userName;
@@ -100,9 +103,10 @@ class HomeScreen extends StatelessWidget {
                   title: "Learn Security",
                   description: "Learn how to stay safe online.",
                   onTap: () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text("Security learning coming soon."),
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const LearnSecurityScreen(),
                       ),
                     );
                   },
@@ -112,9 +116,10 @@ class HomeScreen extends StatelessWidget {
                   title: "Phishing Check",
                   description: "Check suspicious links and messages.",
                   onTap: () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text("Phishing detection coming soon."),
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const PhishingCheckScreen(),
                       ),
                     );
                   },
@@ -124,9 +129,10 @@ class HomeScreen extends StatelessWidget {
                   title: "Report Crime",
                   description: "Report a cybercrime or scam.",
                   onTap: () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text("Cybercrime reporting coming soon."),
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const ReportCrimeScreen(),
                       ),
                     );
                   },
