@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:sentri/screens/login_screen.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -169,27 +170,32 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   onPressed: _isLoading
                       ? null
                       : () async {
-                          if (_formKey.currentState!.validate()) {
-                            setState(() {
-                              _isLoading = true;
-                            });
-
-                            await Future.delayed(
-                              const Duration(seconds: 2),
-                            );
-                            if (!context.mounted) return;
-
-                            setState(() {
-                              _isLoading = false;
-                            });
-
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text("Account created successfully!"),
-                              ),
-                            );
-                            Navigator.pop(context);
+                          if (!_formKey.currentState!.validate()) {
+                            return;
                           }
+
+                          setState(() {
+                            _isLoading = true;
+                          });
+
+                          await Future.delayed(
+                            const Duration(seconds: 2),
+                          );
+
+                          if (!context.mounted) {
+                            return;
+                          }
+
+                          setState(() {
+                            _isLoading = false;
+                          });
+
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => const LoginScreen(),
+                            ),
+                          );
                         },
                   child: _isLoading
                       ? const SizedBox(
@@ -197,11 +203,19 @@ class _RegisterScreenState extends State<RegisterScreen> {
                           width: 20,
                           child: CircularProgressIndicator(
                             strokeWidth: 2,
+                            color: Colors.white,
                           ),
                         )
-                      : const Text("Create Account"),
+                      : const Text(
+                          "Create Account",
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
                 ),
                 const SizedBox(height: 20),
+
                 //Login
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
@@ -209,7 +223,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     const Text("Already have an account?"),
                     TextButton(
                       onPressed: () {
-                        Navigator.pop(context);
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const LoginScreen(),
+                          ),
+                        );
                       },
                       child: const Text("Log In"),
                     ),

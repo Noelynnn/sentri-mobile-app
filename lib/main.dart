@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'screens/report_crime_screen.dart';
+import 'screens/splash_screen.dart';
 
 void main() {
   runApp(const MyApp());
@@ -14,7 +14,7 @@ class MyApp extends StatelessWidget {
     return const MaterialApp(
       debugShowCheckedModeBanner: false,
       title: 'Sentri',
-      home: ReportCrimeScreen(), // Change this to the desired initial screen
+      home: SplashScreen(), // Change this to the desired initial screen
     );
   }
 }
