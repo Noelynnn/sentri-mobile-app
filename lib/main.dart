@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'screens/splash_screen.dart';
+import 'screens/check_scam_screen.dart';
 
 void main() {
   runApp(const MyApp());
@@ -14,7 +14,7 @@ class MyApp extends StatelessWidget {
     return const MaterialApp(
       debugShowCheckedModeBanner: false,
       title: 'Sentri',
-      home: SplashScreen(), // Change this to the desired initial screen
+      home: CheckScamScreen(), // Change this to the desired initial screen
     );
   }
 }

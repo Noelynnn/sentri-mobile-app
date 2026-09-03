@@ -1,5 +1,9 @@
 import 'package:flutter/material.dart';
 
+import '../models/analysis_result.dart';
+import '../widgets/phishing_result_card.dart';
+import '../services/phishing_analysis_service.dart';
+
 class PhishingCheckScreen extends StatefulWidget {
   const PhishingCheckScreen({super.key});
 
@@ -10,14 +14,40 @@ class PhishingCheckScreen extends StatefulWidget {
 class _PhishingCheckScreenState extends State<PhishingCheckScreen> {
   final _formKey = GlobalKey<FormState>();
   final _urlController = TextEditingController();
+  final PhishingAnalysisService _phishingAnalysisService =
+      PhishingAnalysisService();
 
   bool _isLoading = false;
-  String? _analysisResult;
+  AnalysisResult? _analysisResult;
 
   @override
   void dispose() {
     _urlController.dispose();
     super.dispose();
+  }
+
+  Future<void> _analyzeLink() async {
+    if (!_formKey.currentState!.validate()) {
+      return;
+    }
+
+    setState(() {
+      _isLoading = true;
+      _analysisResult = null;
+    });
+
+    final result = await _phishingAnalysisService.analyze(
+      _urlController.text,
+    );
+
+    if (!context.mounted) {
+      return;
+    }
+
+    setState(() {
+      _isLoading = false;
+      _analysisResult = result;
+    });
   }
 
   @override
@@ -30,6 +60,7 @@ class _PhishingCheckScreenState extends State<PhishingCheckScreen> {
         child: ListView(
           padding: const EdgeInsets.all(20),
           children: [
+            // Title
             Text(
               "Check a suspicious link",
               style: TextStyle(
@@ -38,20 +69,28 @@ class _PhishingCheckScreenState extends State<PhishingCheckScreen> {
                 color: Colors.indigo.shade900,
               ),
             ),
+
             const SizedBox(height: 10),
+
+            // Description
             Text(
               "Paste a link below and Sentri will help you assess whether it may be a phishing link.",
               style: TextStyle(
                 fontSize: 16,
+                height: 1.4,
                 color: Colors.grey.shade600,
               ),
             ),
+
             const SizedBox(height: 30),
+
+            // URL form
             Form(
               key: _formKey,
               child: TextFormField(
                 controller: _urlController,
                 keyboardType: TextInputType.url,
+                enabled: !_isLoading,
                 decoration: const InputDecoration(
                   labelText: "Suspicious link",
                   hintText: "https://example.com",
@@ -63,8 +102,10 @@ class _PhishingCheckScreenState extends State<PhishingCheckScreen> {
                     return "Please enter a link";
                   }
 
-                  if (!value.trim().startsWith("http://") &&
-                      !value.trim().startsWith("https://")) {
+                  final url = value.trim();
+
+                  if (!url.startsWith("http://") &&
+                      !url.startsWith("https://")) {
                     return "Enter a valid URL";
                   }
 
@@ -72,57 +113,35 @@ class _PhishingCheckScreenState extends State<PhishingCheckScreen> {
                 },
               ),
             ),
+
             const SizedBox(height: 30),
+
+            // Analyze button
             ElevatedButton(
-              onPressed: _isLoading
-                  ? null
-                  : () async {
-                      if (!_formKey.currentState!.validate()) {
-                        return;
-                      }
-
-                      setState(() {
-                        _isLoading = true;
-                      });
-
-                      await Future.delayed(
-                        const Duration(seconds: 2),
-                      );
-
-                      if (!context.mounted) return;
-
-                      setState(() {
-                        _isLoading = false;
-                        _analysisResult = "Potential phishing link";
-                      });
-                    },
+              onPressed: _isLoading ? null : _analyzeLink,
               child: _isLoading
                   ? const SizedBox(
                       height: 20,
                       width: 20,
                       child: CircularProgressIndicator(
                         strokeWidth: 2,
+                        color: Colors.white,
                       ),
                     )
-                  : const Text("Analyze Link"),
+                  : const Text(
+                      "Analyze Link",
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
             ),
+
+            // Result
             if (_analysisResult != null) ...[
               const SizedBox(height: 30),
-              Container(
-                padding: const EdgeInsets.all(20),
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(
-                    color: Colors.grey.shade300,
-                  ),
-                ),
-                child: Text(
-                  _analysisResult!,
-                  style: const TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
+              PhishingResultCard(
+                result: _analysisResult!,
               ),
             ],
           ],
