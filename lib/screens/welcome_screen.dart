@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:sentri/screens/register_screen.dart';
 import 'learn_more_screen.dart';
+import 'onboarding_flow.dart';
 
 class WelcomeScreen extends StatelessWidget {
   const WelcomeScreen({super.key});
@@ -53,7 +53,7 @@ class WelcomeScreen extends StatelessWidget {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (context) => const RegisterScreen(),
+                    builder: (context) => const OnboardingFlow(),
                   ),
                 );
               },

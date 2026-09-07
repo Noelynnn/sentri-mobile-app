@@ -1,6 +1,6 @@
-import 'package:flutter/material.dart';
 import 'dart:async';
 
+import 'package:flutter/material.dart';
 import 'package:sentri/screens/welcome_screen.dart';
 
 class SplashScreen extends StatefulWidget {
@@ -14,9 +14,14 @@ class _SplashScreenState extends State<SplashScreen> {
   @override
   void initState() {
     super.initState();
+
     Timer(
       const Duration(seconds: 5),
       () {
+        if (!mounted) {
+          return;
+        }
+
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(
@@ -50,9 +55,7 @@ class _SplashScreenState extends State<SplashScreen> {
                 letterSpacing: 4,
               ),
             ),
-            SizedBox(
-              height: 16,
-            ),
+            SizedBox(height: 16),
             Text(
               'Your Digital Safety Companion',
               style: TextStyle(

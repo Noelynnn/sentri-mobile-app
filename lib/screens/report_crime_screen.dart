@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../services/report_api_service.dart';
+import '../services/auth_api_service.dart';
 
 class ReportCrimeScreen extends StatefulWidget {
   const ReportCrimeScreen({super.key});
@@ -12,6 +14,7 @@ class _ReportCrimeScreenState extends State<ReportCrimeScreen> {
 
   final _descriptionController = TextEditingController();
   final _detailsController = TextEditingController();
+  final ReportApiService _reportApiService = ReportApiService();
 
   String? _selectedIncidentType;
   bool _isLoading = false;
@@ -24,17 +27,21 @@ class _ReportCrimeScreenState extends State<ReportCrimeScreen> {
     super.dispose();
   }
 
-  // Generates a temporary report reference.
-  // This will eventually come from the backend.
-  String _generateReportReference() {
-    final timestamp = DateTime.now().millisecondsSinceEpoch;
-
-    return "SR-${DateTime.now().year}-${timestamp.toString().substring(timestamp.toString().length - 4)}";
-  }
-
   // Handles report submission.
   Future<void> _submitReport() async {
     if (!_formKey.currentState!.validate()) {
+      return;
+    }
+
+    if (_selectedIncidentType == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Please select an incident type.',
+          ),
+        ),
+      );
+
       return;
     }
 
@@ -43,19 +50,57 @@ class _ReportCrimeScreenState extends State<ReportCrimeScreen> {
       _reportReference = null;
     });
 
-    // Simulate report submission.
-    await Future.delayed(
-      const Duration(seconds: 2),
-    );
+    try {
+      final report = await _reportApiService.submitReport(
+        incidentType: _selectedIncidentType!,
+        description: _descriptionController.text,
+        additionalDetails: _detailsController.text,
+      );
 
-    if (!context.mounted) {
-      return;
+      if (!mounted) {
+        return;
+      }
+
+      setState(() {
+        _reportReference = report.referenceNumber;
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Report submitted successfully.',
+          ),
+        ),
+      );
+    } on ApiException catch (e) {
+      if (!mounted) {
+        return;
+      }
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(e.message),
+        ),
+      );
+    } catch (_) {
+      if (!mounted) {
+        return;
+      }
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Something went wrong. Please try again.',
+          ),
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
     }
-
-    setState(() {
-      _isLoading = false;
-      _reportReference = _generateReportReference();
-    });
   }
 
   @override

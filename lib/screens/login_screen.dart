@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:sentri/screens/forgot_password_screen.dart';
 import 'package:sentri/screens/register_screen.dart';
 import 'package:sentri/screens/home_screen.dart';
+import 'package:sentri/services/auth_api_service.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -16,6 +17,8 @@ class _LoginScreenState extends State<LoginScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
 
+  final AuthApiService _authApiService = AuthApiService();
+
   bool _obscurePassword = true;
   bool _isLoading = false;
 
@@ -24,6 +27,64 @@ class _LoginScreenState extends State<LoginScreen> {
     _emailController.dispose();
     _passwordController.dispose();
     super.dispose();
+  }
+
+  Future<void> _login() async {
+    if (!_formKey.currentState!.validate()) {
+      return;
+    }
+
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      final response = await _authApiService.login(
+        email: _emailController.text.trim(),
+        password: _passwordController.text,
+      );
+
+      if (!mounted) {
+        return;
+      }
+
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (context) => HomeScreen(
+            userName: response.user.fullName,
+          ),
+        ),
+      );
+    } on ApiException catch (e) {
+      if (!mounted) {
+        return;
+      }
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(e.message),
+        ),
+      );
+    } catch (_) {
+      if (!mounted) {
+        return;
+      }
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            "Something went wrong. Please try again.",
+          ),
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
   }
 
   @override
@@ -77,6 +138,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 TextFormField(
                   controller: _emailController,
                   keyboardType: TextInputType.emailAddress,
+                  enabled: !_isLoading,
                   decoration: const InputDecoration(
                     labelText: "Email",
                     prefixIcon: Icon(Icons.email_outlined),
@@ -101,6 +163,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 TextFormField(
                   controller: _passwordController,
                   obscureText: _obscurePassword,
+                  enabled: !_isLoading,
                   decoration: InputDecoration(
                     labelText: "Password",
                     prefixIcon: const Icon(Icons.lock_outline),
@@ -110,11 +173,13 @@ class _LoginScreenState extends State<LoginScreen> {
                             ? Icons.visibility_outlined
                             : Icons.visibility_off_outlined,
                       ),
-                      onPressed: () {
-                        setState(() {
-                          _obscurePassword = !_obscurePassword;
-                        });
-                      },
+                      onPressed: _isLoading
+                          ? null
+                          : () {
+                              setState(() {
+                                _obscurePassword = !_obscurePassword;
+                              });
+                            },
                     ),
                     border: const OutlineInputBorder(),
                   ),
@@ -127,6 +192,32 @@ class _LoginScreenState extends State<LoginScreen> {
                   },
                 ),
 
+                const SizedBox(height: 20),
+
+                // Login Button
+                ElevatedButton(
+                  onPressed: _isLoading
+                      ? null
+                      : () {
+                          _login();
+                        },
+                  child: _isLoading
+                      ? const SizedBox(
+                          height: 20,
+                          width: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
+                        )
+                      : const Text(
+                          "Log In",
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                ),
                 const SizedBox(height: 8),
 
                 // Forgot Password
@@ -151,82 +242,6 @@ class _LoginScreenState extends State<LoginScreen> {
                     child: const Text("Forgot Password?"),
                   ),
                 ),
-
-                const SizedBox(height: 20),
-
-                // Login Button
-                ElevatedButton(
-                  onPressed: _isLoading
-                      ? null
-                      : () async {
-                          if (!_formKey.currentState!.validate()) {
-                            return;
-                          }
-
-                          setState(() {
-                            _isLoading = true;
-                          });
-
-                          await Future.delayed(
-                            const Duration(seconds: 2),
-                          );
-
-                          if (!context.mounted) {
-                            return;
-                          }
-
-                          final email = _emailController.text.trim();
-                          final password = _passwordController.text;
-
-                          const correctEmail = "test@sentri.com";
-                          const correctPassword = "sentri123";
-
-                          final isValidLogin = email == correctEmail &&
-                              password == correctPassword;
-
-                          if (!isValidLogin) {
-                            setState(() {
-                              _isLoading = false;
-                            });
-
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text(
-                                  "Invalid email or password.",
-                                ),
-                              ),
-                            );
-
-                            return;
-                          }
-
-                          Navigator.pushReplacement(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => const HomeScreen(
-                                userName: "Sentri User",
-                              ),
-                            ),
-                          );
-                        },
-                  child: _isLoading
-                      ? const SizedBox(
-                          height: 20,
-                          width: 20,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: Colors.white,
-                          ),
-                        )
-                      : const Text(
-                          "Log In",
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                ),
-
                 const SizedBox(height: 20),
 
                 // Sign Up
