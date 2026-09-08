@@ -1,61 +1,122 @@
+import 'dart:convert';
+
+import 'package:http/http.dart' as http;
+
+import '../config/api_config.dart';
 import '../models/analysis_result.dart';
 import '../models/risk_level.dart';
+import 'auth_api_service.dart';
+import 'auth_storage_service.dart';
 
 class ScamAnalysisService {
+  final AuthStorageService _storageService = AuthStorageService();
+
   Future<AnalysisResult> analyze({
     required String message,
     bool hasImage = false,
   }) async {
-    // Temporary delay to simulate an analysis request.
-    await Future.delayed(
-      const Duration(seconds: 2),
-    );
+    // Get the JWT saved during login.
+    final token = await _storageService.getToken();
 
-    final normalizedMessage = message.trim().toLowerCase();
-
-    if (normalizedMessage.contains("congratulations") ||
-        normalizedMessage.contains("urgent") ||
-        normalizedMessage.contains("winner") ||
-        normalizedMessage.contains("click") ||
-        normalizedMessage.contains("prize")) {
-      return const AnalysisResult(
-        riskLevel: RiskLevel.highRisk,
-        message:
-            "This message contains several signs commonly associated with scams.",
-        reasons: [
-          "Creates a sense of urgency",
-          "May encourage you to click a link",
-          "Uses language commonly found in scam messages",
-        ],
-        recommendation:
-            "Do not click links, send money, or share personal information.",
+    if (token == null || token.isEmpty) {
+      throw const ApiException(
+        'You are not authenticated. Please log in again.',
       );
     }
 
-    if (hasImage && normalizedMessage.isEmpty) {
-      return const AnalysisResult(
-        riskLevel: RiskLevel.suspicious,
-        message:
-            "The screenshot has been submitted for review, but the current prototype cannot perform image analysis yet.",
-        reasons: [
-          "Image analysis will be connected to the detection service later.",
-          "A screenshot alone cannot be reliably classified by the current mock analyzer.",
-        ],
-        recommendation:
-            "Avoid interacting with the message until it has been properly verified.",
+    final url = Uri.parse(
+      '${ApiConfig.baseUrl}/api/scam/analyze',
+    );
+
+    try {
+      final response = await http.post(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode({
+          'message': message.trim(),
+          'has_image': hasImage,
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> data = jsonDecode(response.body);
+
+        return AnalysisResult(
+          riskLevel: _parseRiskLevel(
+            data['risk_level'] as String,
+          ),
+          message: data['message'] as String,
+          reasons: List<String>.from(
+            data['reasons'] as List,
+          ),
+          recommendation: data['recommendation'] as String,
+        );
+      }
+
+      throw ApiException(
+        _extractErrorMessage(response),
+        statusCode: response.statusCode,
+      );
+    } on ApiException {
+      rethrow;
+    } on http.ClientException {
+      throw const ApiException(
+        'Unable to connect to the Sentri server. '
+        'Please make sure the backend is running.',
+      );
+    } on FormatException {
+      throw const ApiException(
+        'The server returned an invalid response.',
+      );
+    } catch (e) {
+      throw ApiException(
+        'Something went wrong: $e',
       );
     }
+  }
 
-    return const AnalysisResult(
-      riskLevel: RiskLevel.suspicious,
-      message:
-          "This message does not contain obvious scam indicators from our basic check, but caution is still recommended.",
-      reasons: [
-        "The message could not be fully verified.",
-        "Unexpected messages should be treated cautiously.",
-      ],
-      recommendation:
-          "Verify the sender independently before taking any action.",
-    );
+  RiskLevel _parseRiskLevel(String value) {
+    switch (value) {
+      case 'safe':
+        return RiskLevel.safe;
+
+      case 'suspicious':
+        return RiskLevel.suspicious;
+
+      case 'highRisk':
+        return RiskLevel.highRisk;
+
+      default:
+        throw const ApiException(
+          'The server returned an unknown risk level.',
+        );
+    }
+  }
+
+  String _extractErrorMessage(http.Response response) {
+    try {
+      final Map<String, dynamic> data = jsonDecode(response.body);
+
+      final detail = data['detail'];
+
+      if (detail is String) {
+        return detail;
+      }
+
+      if (detail is List && detail.isNotEmpty) {
+        final firstError = detail.first;
+
+        if (firstError is Map && firstError['msg'] != null) {
+          return firstError['msg'].toString();
+        }
+      }
+
+      return 'Request failed with status ${response.statusCode}.';
+    } catch (_) {
+      return 'Request failed with status ${response.statusCode}.';
+    }
   }
 }

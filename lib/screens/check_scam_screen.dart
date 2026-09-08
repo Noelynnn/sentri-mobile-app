@@ -5,6 +5,7 @@ import 'package:image_picker/image_picker.dart';
 
 import '../models/analysis_result.dart';
 import '../widgets/scam_result_card.dart';
+import '../services/auth_api_service.dart';
 import '../services/scam_analysis_service.dart';
 
 class CheckScamScreen extends StatefulWidget {
@@ -59,7 +60,7 @@ class _CheckScamScreenState extends State<CheckScamScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text(
-            "Enter a message or upload a screenshot to analyze.",
+            'Please enter a message or upload a screenshot.',
           ),
         ),
       );
@@ -72,19 +73,48 @@ class _CheckScamScreenState extends State<CheckScamScreen> {
       _analysisResult = null;
     });
 
-    final result = await _scamAnalysisService.analyze(
-      message: message,
-      hasImage: hasImage,
-    );
+    try {
+      final result = await _scamAnalysisService.analyze(
+        message: message,
+        hasImage: hasImage,
+      );
 
-    if (!context.mounted) {
-      return;
+      if (!mounted) {
+        return;
+      }
+
+      setState(() {
+        _analysisResult = result;
+      });
+    } on ApiException catch (e) {
+      if (!mounted) {
+        return;
+      }
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(e.message),
+        ),
+      );
+    } catch (_) {
+      if (!mounted) {
+        return;
+      }
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Something went wrong. Please try again.',
+          ),
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
     }
-
-    setState(() {
-      _isLoading = false;
-      _analysisResult = result;
-    });
   }
 
   @override
