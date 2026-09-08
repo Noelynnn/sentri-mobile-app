@@ -1,44 +1,117 @@
+import 'dart:convert';
+
+import 'package:http/http.dart' as http;
+
+import '../config/api_config.dart';
 import '../models/analysis_result.dart';
 import '../models/risk_level.dart';
+import 'auth_api_service.dart';
+import 'auth_storage_service.dart';
 
 class PhishingAnalysisService {
+  final AuthStorageService _storageService = AuthStorageService();
+
   Future<AnalysisResult> analyze(String url) async {
-    // Temporary delay to simulate an analysis request.
-    await Future.delayed(
-      const Duration(seconds: 2),
-    );
+    final token = await _storageService.getToken();
 
-    final normalizedUrl = url.trim().toLowerCase();
-
-    if (normalizedUrl.contains("login") ||
-        normalizedUrl.contains("verify") ||
-        normalizedUrl.contains("account") ||
-        normalizedUrl.contains("free") ||
-        normalizedUrl.contains("claim")) {
-      return const AnalysisResult(
-        riskLevel: RiskLevel.highRisk,
-        message:
-            "This link contains patterns that may be associated with phishing attempts.",
-        reasons: [
-          "The URL contains language commonly used to create urgency or request verification.",
-          "Phishing links may imitate legitimate login or account pages.",
-          "The destination could not be independently verified.",
-        ],
-        recommendation:
-            "Do not enter passwords, payment details, or other sensitive information until the website has been independently verified.",
+    if (token == null || token.isEmpty) {
+      throw const ApiException(
+        'You are not authenticated. Please log in again.',
       );
     }
 
-    return const AnalysisResult(
-      riskLevel: RiskLevel.suspicious,
-      message:
-          "This link does not show obvious phishing indicators from our basic check, but caution is still recommended.",
-      reasons: [
-        "A basic URL check cannot confirm whether a website is trustworthy.",
-        "The destination should be verified before sensitive information is entered.",
-      ],
-      recommendation:
-          "Verify the website address independently and avoid entering sensitive information if anything looks unusual.",
+    final endpoint = Uri.parse(
+      '${ApiConfig.baseUrl}/api/phishing/analyze',
     );
+
+    try {
+      final response = await http.post(
+        endpoint,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode({
+          'url': url.trim(),
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> data = jsonDecode(response.body);
+
+        return AnalysisResult(
+          riskLevel: _parseRiskLevel(
+            data['risk_level'] as String,
+          ),
+          message: data['message'] as String,
+          reasons: List<String>.from(
+            data['reasons'] as List,
+          ),
+          recommendation: data['recommendation'] as String,
+        );
+      }
+
+      throw ApiException(
+        _extractErrorMessage(response),
+        statusCode: response.statusCode,
+      );
+    } on ApiException {
+      rethrow;
+    } on http.ClientException {
+      throw const ApiException(
+        'Unable to connect to the Sentri server. '
+        'Please make sure the backend is running.',
+      );
+    } on FormatException {
+      throw const ApiException(
+        'The server returned an invalid response.',
+      );
+    } catch (e) {
+      throw ApiException(
+        'Something went wrong: $e',
+      );
+    }
+  }
+
+  RiskLevel _parseRiskLevel(String value) {
+    switch (value) {
+      case 'safe':
+        return RiskLevel.safe;
+
+      case 'suspicious':
+        return RiskLevel.suspicious;
+
+      case 'highRisk':
+        return RiskLevel.highRisk;
+
+      default:
+        throw const ApiException(
+          'The server returned an unknown risk level.',
+        );
+    }
+  }
+
+  String _extractErrorMessage(http.Response response) {
+    try {
+      final Map<String, dynamic> data = jsonDecode(response.body);
+
+      final detail = data['detail'];
+
+      if (detail is String) {
+        return detail;
+      }
+
+      if (detail is List && detail.isNotEmpty) {
+        final firstError = detail.first;
+
+        if (firstError is Map && firstError['msg'] != null) {
+          return firstError['msg'].toString();
+        }
+      }
+
+      return 'Request failed with status ${response.statusCode}.';
+    } catch (_) {
+      return 'Request failed with status ${response.statusCode}.';
+    }
   }
 }

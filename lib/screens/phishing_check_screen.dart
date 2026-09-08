@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../models/analysis_result.dart';
 import '../widgets/phishing_result_card.dart';
+import '../services/auth_api_service.dart';
 import '../services/phishing_analysis_service.dart';
 
 class PhishingCheckScreen extends StatefulWidget {
@@ -36,18 +37,47 @@ class _PhishingCheckScreenState extends State<PhishingCheckScreen> {
       _analysisResult = null;
     });
 
-    final result = await _phishingAnalysisService.analyze(
-      _urlController.text,
-    );
+    try {
+      final result = await _phishingAnalysisService.analyze(
+        _urlController.text.trim(),
+      );
 
-    if (!context.mounted) {
-      return;
+      if (!mounted) {
+        return;
+      }
+
+      setState(() {
+        _analysisResult = result;
+      });
+    } on ApiException catch (e) {
+      if (!mounted) {
+        return;
+      }
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(e.message),
+        ),
+      );
+    } catch (_) {
+      if (!mounted) {
+        return;
+      }
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Something went wrong. Please try again.',
+          ),
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
     }
-
-    setState(() {
-      _isLoading = false;
-      _analysisResult = result;
-    });
   }
 
   @override
@@ -99,13 +129,14 @@ class _PhishingCheckScreenState extends State<PhishingCheckScreen> {
                 ),
                 validator: (value) {
                   if (value == null || value.trim().isEmpty) {
-                    return "Please enter a link";
+                    return "Please enter a URL";
                   }
 
-                  final url = value.trim();
+                  final uri = Uri.tryParse(value.trim());
 
-                  if (!url.startsWith("http://") &&
-                      !url.startsWith("https://")) {
+                  if (uri == null ||
+                      (uri.scheme != 'http' && uri.scheme != 'https') ||
+                      uri.host.isEmpty) {
                     return "Enter a valid URL";
                   }
 
