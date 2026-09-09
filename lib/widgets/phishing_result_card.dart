@@ -59,6 +59,13 @@ class PhishingResultCard extends StatelessWidget {
                         color: resultColor,
                       ),
                     ),
+                    const SizedBox(height: 6),
+                    Text(
+                      'Risk Score: ${result.riskScore}/100',
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
                   ],
                 ),
               ),

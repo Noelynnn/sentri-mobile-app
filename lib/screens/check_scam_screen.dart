@@ -74,10 +74,18 @@ class _CheckScamScreenState extends State<CheckScamScreen> {
     });
 
     try {
-      final result = await _scamAnalysisService.analyze(
-        message: message,
-        hasImage: hasImage,
-      );
+      late final AnalysisResult result;
+
+      if (hasImage) {
+        result = await _scamAnalysisService.analyzeImage(
+          image: _selectedImage!,
+          message: message,
+        );
+      } else {
+        result = await _scamAnalysisService.analyze(
+          message: message,
+        );
+      }
 
       if (!mounted) {
         return;

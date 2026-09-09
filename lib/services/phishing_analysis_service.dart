@@ -43,6 +43,7 @@ class PhishingAnalysisService {
           riskLevel: _parseRiskLevel(
             data['risk_level'] as String,
           ),
+          riskScore: data['risk_score'] as int,
           message: data['message'] as String,
           reasons: List<String>.from(
             data['reasons'] as List,
