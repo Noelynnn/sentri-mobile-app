@@ -17,53 +17,64 @@ class PhishingResultCard extends StatelessWidget {
     final resultIcon = _getResultIcon(result.riskLevel);
 
     return Container(
+      width: double.infinity,
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(20),
-        color: resultColor.withOpacity(0.08),
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(24),
         border: Border.all(
-          color: resultColor.withOpacity(0.35),
+          color: resultColor.withOpacity(0.25),
         ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 18,
+            offset: const Offset(0, 8),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Result header
+          // --------------------------------------------------
+          // Header
+          // --------------------------------------------------
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Icon(
-                resultIcon,
-                size: 32,
-                color: resultColor,
+              Container(
+                width: 52,
+                height: 52,
+                decoration: BoxDecoration(
+                  color: resultColor.withOpacity(0.10),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  resultIcon,
+                  size: 28,
+                  color: resultColor,
+                ),
               ),
-              const SizedBox(width: 10),
+              const SizedBox(width: 14),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      "Phishing Check Result",
+                      "Phishing Check",
                       style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.indigo.shade900,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.grey.shade600,
                       ),
                     ),
-                    const SizedBox(height: 5),
+                    const SizedBox(height: 4),
                     Text(
                       _riskLevelText(result.riskLevel),
                       style: TextStyle(
-                        fontSize: 22,
+                        fontSize: 23,
                         fontWeight: FontWeight.bold,
                         color: resultColor,
-                      ),
-                    ),
-                    const SizedBox(height: 6),
-                    Text(
-                      'Risk Score: ${result.riskScore}/100',
-                      style: const TextStyle(
-                        fontWeight: FontWeight.w600,
                       ),
                     ),
                   ],
@@ -72,50 +83,109 @@ class PhishingResultCard extends StatelessWidget {
             ],
           ),
 
-          const SizedBox(height: 20),
+          const SizedBox(height: 22),
 
-          // Main result message
+          // --------------------------------------------------
+          // Risk score
+          // --------------------------------------------------
           Text(
-            result.message,
-            style: const TextStyle(
-              fontSize: 16,
-              height: 1.4,
+            "Risk score",
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+              color: Colors.grey.shade700,
             ),
           ),
 
-          const SizedBox(height: 20),
+          const SizedBox(height: 8),
 
-          // Reasons
-          Text(
-            "Why we think so",
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-              color: Colors.indigo.shade900,
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Expanded(
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(10),
+                  child: LinearProgressIndicator(
+                    value: result.riskScore / 100,
+                    minHeight: 9,
+                    backgroundColor: Colors.grey.shade200,
+                    valueColor: AlwaysStoppedAnimation<Color>(
+                      resultColor,
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Text(
+                "${result.riskScore}/100",
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                  color: resultColor,
+                ),
+              ),
+            ],
+          ),
+
+          const SizedBox(height: 22),
+
+          // --------------------------------------------------
+          // Main message
+          // --------------------------------------------------
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(15),
+            decoration: BoxDecoration(
+              color: Colors.grey.shade50,
+              borderRadius: BorderRadius.circular(16),
             ),
+            child: Text(
+              result.message,
+              style: TextStyle(
+                fontSize: 15,
+                height: 1.5,
+                color: Colors.grey.shade800,
+              ),
+            ),
+          ),
+
+          const SizedBox(height: 22),
+
+          // --------------------------------------------------
+          // Why we think so
+          // --------------------------------------------------
+          _buildSectionTitle(
+            title: "Why we think so",
+            icon: Icons.link_rounded,
           ),
 
           const SizedBox(height: 10),
 
           ...result.reasons.map(
             (reason) => Padding(
-              padding: const EdgeInsets.only(bottom: 8),
+              padding: const EdgeInsets.only(bottom: 10),
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    "• ",
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
+                  Container(
+                    width: 8,
+                    height: 8,
+                    margin: const EdgeInsets.only(
+                      top: 6,
+                      right: 10,
+                    ),
+                    decoration: BoxDecoration(
                       color: resultColor,
+                      shape: BoxShape.circle,
                     ),
                   ),
                   Expanded(
                     child: Text(
                       reason,
-                      style: const TextStyle(
-                        fontSize: 15,
-                        height: 1.3,
+                      style: TextStyle(
+                        fontSize: 14,
+                        height: 1.45,
+                        color: Colors.grey.shade800,
                       ),
                     ),
                   ),
@@ -124,30 +194,66 @@ class PhishingResultCard extends StatelessWidget {
             ),
           ),
 
-          const SizedBox(height: 15),
-
-          // Recommendation
-          Text(
-            "What you should do",
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-              color: Colors.indigo.shade900,
-            ),
-          ),
-
           const SizedBox(height: 8),
 
-          Text(
-            result.recommendation,
-            style: TextStyle(
-              fontSize: 15,
-              height: 1.4,
-              color: Colors.grey.shade700,
+          // --------------------------------------------------
+          // Recommendation
+          // --------------------------------------------------
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.indigo.shade50,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(
+                color: Colors.indigo.shade100,
+              ),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _buildSectionTitle(
+                  title: "What you should do",
+                  icon: Icons.shield_outlined,
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  result.recommendation,
+                  style: TextStyle(
+                    fontSize: 14,
+                    height: 1.5,
+                    color: Colors.indigo.shade900,
+                  ),
+                ),
+              ],
             ),
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildSectionTitle({
+    required String title,
+    required IconData icon,
+  }) {
+    return Row(
+      children: [
+        Icon(
+          icon,
+          size: 19,
+          color: Colors.indigo.shade900,
+        ),
+        const SizedBox(width: 7),
+        Text(
+          title,
+          style: TextStyle(
+            fontSize: 15,
+            fontWeight: FontWeight.bold,
+            color: Colors.indigo.shade900,
+          ),
+        ),
+      ],
     );
   }
 
