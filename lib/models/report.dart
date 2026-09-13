@@ -6,6 +6,7 @@ class Report {
   final String referenceNumber;
   final String status;
   final String createdAt;
+  final int evidenceCount;
 
   const Report({
     required this.id,
@@ -15,9 +16,12 @@ class Report {
     required this.referenceNumber,
     required this.status,
     required this.createdAt,
+    required this.evidenceCount,
   });
 
-  factory Report.fromJson(Map<String, dynamic> json) {
+  factory Report.fromJson(
+    Map<String, dynamic> json,
+  ) {
     return Report(
       id: json['id'] as int,
       incidentType: json['incident_type'] as String,
@@ -26,6 +30,7 @@ class Report {
       referenceNumber: json['reference_number'] as String,
       status: json['status'] as String,
       createdAt: json['created_at'].toString(),
+      evidenceCount: json['evidence_count'] as int? ?? 0,
     );
   }
 }

@@ -1,19 +1,57 @@
 import 'dart:convert';
 
 import 'package:http/http.dart' as http;
+import 'package:image_picker/image_picker.dart';
 
 import '../config/api_config.dart';
 import '../models/report.dart';
-import 'auth_storage_service.dart';
 import 'auth_api_service.dart';
+import 'auth_storage_service.dart';
 
 class ReportApiService {
   final AuthStorageService _storageService = AuthStorageService();
+
+  Future<List<Report>> getReports() async {
+    final token = await _storageService.getToken();
+
+    if (token == null || token.isEmpty) {
+      throw Exception('Authentication token not found.');
+    }
+
+    final response = await http.get(
+      Uri.parse('${ApiConfig.baseUrl}/api/reports'),
+      headers: {
+        'Authorization': 'Bearer $token',
+        'Content-Type': 'application/json',
+      },
+    );
+
+    if (response.statusCode == 200) {
+      final List<dynamic> data = jsonDecode(response.body);
+
+      return data
+          .map(
+            (json) => Report.fromJson(
+              json as Map<String, dynamic>,
+            ),
+          )
+          .toList();
+    }
+
+    if (response.statusCode == 401) {
+      throw Exception('Your session has expired. Please log in again.');
+    }
+
+    throw Exception(
+      'Failed to load reports (${response.statusCode}).',
+    );
+  }
 
   Future<Report> submitReport({
     required String incidentType,
     required String description,
     String? additionalDetails,
+    List<XFile> evidence = const [],
   }) async {
     final token = await _storageService.getToken();
 
@@ -28,19 +66,37 @@ class ReportApiService {
     );
 
     try {
-      final response = await http.post(
+      final request = http.MultipartRequest(
+        'POST',
         url,
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer $token',
-        },
-        body: jsonEncode({
-          'incident_type': incidentType,
-          'description': description.trim(),
-          'additional_details': additionalDetails?.trim().isEmpty ?? true
-              ? null
-              : additionalDetails!.trim(),
-        }),
+      );
+
+      request.headers['Authorization'] = 'Bearer $token';
+
+      request.fields['incident_type'] = incidentType.trim();
+
+      request.fields['description'] = description.trim();
+
+      if (additionalDetails != null && additionalDetails.trim().isNotEmpty) {
+        request.fields['additional_details'] = additionalDetails.trim();
+      }
+
+      for (final image in evidence) {
+        final bytes = await image.readAsBytes();
+
+        request.files.add(
+          http.MultipartFile.fromBytes(
+            'evidence',
+            bytes,
+            filename: image.name,
+          ),
+        );
+      }
+
+      final streamedResponse = await request.send();
+
+      final response = await http.Response.fromStream(
+        streamedResponse,
       );
 
       if (response.statusCode == 201) {
@@ -91,9 +147,11 @@ class ReportApiService {
         }
       }
 
-      return 'Request failed with status ${response.statusCode}.';
+      return 'Request failed with status '
+          '${response.statusCode}.';
     } catch (_) {
-      return 'Request failed with status ${response.statusCode}.';
+      return 'Request failed with status '
+          '${response.statusCode}.';
     }
   }
 }
