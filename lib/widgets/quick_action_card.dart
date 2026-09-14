@@ -33,6 +33,7 @@ class QuickActionCard extends StatelessWidget {
             ),
           ),
           child: Column(
+            mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Container(
@@ -58,17 +59,15 @@ class QuickActionCard extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 5),
-              Expanded(
-                child: Text(
-                  description,
-                  style: const TextStyle(
-                    fontSize: 12.5,
-                    height: 1.35,
-                    color: AppColors.textSecondary,
-                  ),
+              Text(
+                description,
+                style: const TextStyle(
+                  fontSize: 12.5,
+                  height: 1.35,
+                  color: AppColors.textSecondary,
                 ),
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: 12),
               const Align(
                 alignment: Alignment.bottomRight,
                 child: Icon(

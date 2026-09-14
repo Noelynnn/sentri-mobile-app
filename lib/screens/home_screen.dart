@@ -1,8 +1,13 @@
 import 'package:flutter/material.dart';
 
 import '../models/report.dart';
+
 import '../services/report_api_service.dart';
+import '../services/security_activity_service.dart';
+import '../services/notification_service.dart';
+
 import '../theme/app_colors.dart';
+
 import '../widgets/quick_action_card.dart';
 import '../widgets/security_status_card.dart';
 
@@ -11,6 +16,8 @@ import 'phishing_check_screen.dart';
 import 'learn_security_screen.dart';
 import 'report_crime_screen.dart';
 import 'my_reports_screen.dart';
+import 'security_activity_screen.dart';
+import 'notifications_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   final String userName;
@@ -26,9 +33,17 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   final ReportApiService _reportApiService = ReportApiService();
+  final SecurityActivityService _securityActivityService =
+      SecurityActivityService();
+  final NotificationService _notificationService = NotificationService();
 
   List<Report> _recentReports = [];
   bool _reportsLoading = true;
+
+  SecurityActivitySummary? _securitySummary;
+  bool _securityLoading = true;
+
+  int _unreadNotificationCount = 0;
 
   final List<String> _cyberTips = [
     'Never share your OTP, PIN, or password with anyone.',
@@ -40,16 +55,18 @@ class _HomeScreenState extends State<HomeScreen> {
     'Use different passwords for your most important accounts.',
   ];
 
-  // These will become dynamic once we connect Sentri's
-  // analysis history to the security score.
-  final int _securityScore = 100;
-  final bool _hasRecentHighRisk = false;
-  final bool _hasRecentSuspicious = false;
-
   @override
   void initState() {
     super.initState();
-    _loadRecentReports();
+    _loadHomeData();
+  }
+
+  Future<void> _loadHomeData() async {
+    await Future.wait([
+      _loadRecentReports(),
+      _loadSecuritySummary(),
+      _loadUnreadNotifications(),
+    ]);
   }
 
   Future<void> _loadRecentReports() async {
@@ -72,15 +89,57 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
+  Future<void> _loadSecuritySummary() async {
+    try {
+      final summary = await _securityActivityService.getSummary();
+
+      if (!mounted) return;
+
+      setState(() {
+        _securitySummary = summary;
+        _securityLoading = false;
+      });
+    } catch (_) {
+      if (!mounted) return;
+
+      setState(() {
+        _securitySummary = null;
+        _securityLoading = false;
+      });
+    }
+  }
+
+  Future<void> _loadUnreadNotifications() async {
+    try {
+      final count = await _notificationService.getUnreadCount();
+
+      if (!mounted) return;
+
+      setState(() {
+        _unreadNotificationCount = count;
+      });
+    } catch (_) {
+      if (!mounted) return;
+
+      setState(() {
+        _unreadNotificationCount = 0;
+      });
+    }
+  }
+
+  Future<void> _refreshHome() async {
+    await _loadHomeData();
+  }
+
   String _getGreeting() {
     final hour = DateTime.now().hour;
 
     if (hour < 12) {
-      return 'Good morning';
+      return 'Good morning,';
     } else if (hour < 17) {
-      return 'Good afternoon';
+      return 'Good afternoon,';
     } else {
-      return 'Good evening';
+      return 'Good evening,';
     }
   }
 
@@ -95,7 +154,10 @@ class _HomeScreenState extends State<HomeScreen> {
       MaterialPageRoute(
         builder: (_) => screen,
       ),
-    );
+    ).then((_) {
+      if (!mounted) return;
+      _loadHomeData();
+    });
   }
 
   Widget _buildHeader() {
@@ -113,13 +175,13 @@ class _HomeScreenState extends State<HomeScreen> {
               Text(
                 _getGreeting(),
                 style: const TextStyle(
-                  fontSize: 14,
+                  fontSize: 25,
                   color: AppColors.textSecondary,
                 ),
               ),
               const SizedBox(height: 4),
               Text(
-                widget.userName,
+                '${widget.userName} 👋',
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: const TextStyle(
@@ -133,7 +195,9 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
         IconButton(
           onPressed: () {
-            // Notifications will be connected later.
+            _openScreen(
+              const NotificationsScreen(),
+            );
           },
           icon: Stack(
             clipBehavior: Clip.none,
@@ -143,26 +207,51 @@ class _HomeScreenState extends State<HomeScreen> {
                 size: 28,
                 color: AppColors.textDark,
               ),
-              Positioned(
-                right: -1,
-                top: -1,
-                child: Container(
-                  width: 9,
-                  height: 9,
-                  decoration: BoxDecoration(
-                    color: AppColors.highRisk,
-                    shape: BoxShape.circle,
-                    border: Border.all(
-                      color: AppColors.background,
-                      width: 1.5,
+              if (_unreadNotificationCount > 0)
+                Positioned(
+                  right: -1,
+                  top: -1,
+                  child: Container(
+                    constraints: const BoxConstraints(
+                      minWidth: 9,
+                      minHeight: 9,
                     ),
+                    padding: _unreadNotificationCount > 9
+                        ? const EdgeInsets.symmetric(
+                            horizontal: 3,
+                          )
+                        : EdgeInsets.zero,
+                    decoration: BoxDecoration(
+                      color: AppColors.highRisk,
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(
+                        color: AppColors.background,
+                        width: 1.5,
+                      ),
+                    ),
+                    alignment: Alignment.center,
+                    child: _unreadNotificationCount > 9
+                        ? Text(
+                            _unreadNotificationCount > 99
+                                ? '99+'
+                                : '$_unreadNotificationCount',
+                            style: const TextStyle(
+                              fontSize: 8,
+                              fontWeight: FontWeight.w800,
+                              color: AppColors.white,
+                            ),
+                          )
+                        : const SizedBox(
+                            width: 5,
+                            height: 5,
+                          ),
                   ),
                 ),
-              ),
             ],
           ),
         ),
-        const SizedBox(width: 4),
+
+        //User Profile Circle Avatar
         GestureDetector(
           onTap: () {
             // Profile screen will be connected later.
@@ -197,6 +286,76 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildSecurityStatus() {
+    if (_securityLoading) {
+      return Container(
+        width: double.infinity,
+        height: 150,
+        decoration: BoxDecoration(
+          color: AppColors.white,
+          borderRadius: BorderRadius.circular(22),
+          border: Border.all(
+            color: AppColors.border,
+          ),
+        ),
+        child: const Center(
+          child: CircularProgressIndicator(
+            color: AppColors.primary,
+          ),
+        ),
+      );
+    }
+
+    if (_securitySummary == null) {
+      return Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: AppColors.white,
+          borderRadius: BorderRadius.circular(22),
+          border: Border.all(
+            color: AppColors.border,
+          ),
+        ),
+        child: const Row(
+          children: [
+            Icon(
+              Icons.info_outline_rounded,
+              color: AppColors.textSecondary,
+            ),
+            SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                'Security activity is currently unavailable. '
+                'Please try refreshing the page.',
+                style: TextStyle(
+                  fontSize: 13,
+                  height: 1.45,
+                  color: AppColors.textSecondary,
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    final summary = _securitySummary!;
+
+    return GestureDetector(
+      onTap: () {
+        _openScreen(
+          const SecurityActivityScreen(),
+        );
+      },
+      child: SecurityStatusCard(
+        status: summary.status,
+        message: summary.message,
+        score: summary.score,
+      ),
     );
   }
 
@@ -589,7 +748,9 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget _buildContinueLearning() {
     return GestureDetector(
       onTap: () {
-        _openScreen(const LearnSecurityScreen());
+        _openScreen(
+          const LearnSecurityScreen(),
+        );
       },
       child: Container(
         width: double.infinity,
@@ -657,26 +818,19 @@ class _HomeScreenState extends State<HomeScreen> {
       body: SafeArea(
         child: RefreshIndicator(
           color: AppColors.primary,
-          onRefresh: _loadRecentReports,
+          onRefresh: _refreshHome,
           child: ListView(
             physics: const AlwaysScrollableScrollPhysics(),
-            padding: const EdgeInsets.fromLTRB(20, 18, 20, 32),
+            padding: const EdgeInsets.fromLTRB(
+              20,
+              18,
+              20,
+              32,
+            ),
             children: [
               _buildHeader(),
               const SizedBox(height: 24),
-              SecurityStatusCard(
-                status: _hasRecentHighRisk
-                    ? 'Stay Alert'
-                    : _hasRecentSuspicious
-                        ? 'Be Cautious'
-                        : 'You’re Protected',
-                message: _hasRecentHighRisk
-                    ? 'A recent activity was identified as high risk.'
-                    : _hasRecentSuspicious
-                        ? 'You recently encountered suspicious content.'
-                        : 'Your recent Sentri activity looks safe.',
-                score: _securityScore,
-              ),
+              _buildSecurityStatus(),
               const SizedBox(height: 18),
               _buildQuickScanButton(),
               const SizedBox(height: 28),
@@ -684,58 +838,70 @@ class _HomeScreenState extends State<HomeScreen> {
                 title: 'Quick Actions',
               ),
               const SizedBox(height: 12),
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Expanded(
-                    child: QuickActionCard(
-                      title: 'Check Scam',
-                      description: 'Analyze a message for scam risks.',
-                      icon: Icons.security_rounded,
-                      onTap: () {
-                        _openScreen(const CheckScamScreen());
-                      },
+              IntrinsicHeight(
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Expanded(
+                      child: QuickActionCard(
+                        title: 'Check Scam',
+                        description: 'Analyze a message for scam risks.',
+                        icon: Icons.security_rounded,
+                        onTap: () {
+                          _openScreen(
+                            const CheckScamScreen(),
+                          );
+                        },
+                      ),
                     ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: QuickActionCard(
-                      title: 'Phishing Check',
-                      description: 'Check whether a link looks suspicious.',
-                      icon: Icons.link_rounded,
-                      onTap: () {
-                        _openScreen(const PhishingCheckScreen());
-                      },
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: QuickActionCard(
+                        title: 'Phishing Check',
+                        description: 'Check whether a link looks suspicious.',
+                        icon: Icons.link_rounded,
+                        onTap: () {
+                          _openScreen(
+                            const PhishingCheckScreen(),
+                          );
+                        },
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
               const SizedBox(height: 12),
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Expanded(
-                    child: QuickActionCard(
-                      title: 'Learn Security',
-                      description: 'Build your cybersecurity knowledge.',
-                      icon: Icons.school_outlined,
-                      onTap: () {
-                        _openScreen(const LearnSecurityScreen());
-                      },
+              IntrinsicHeight(
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Expanded(
+                      child: QuickActionCard(
+                        title: 'Learn Security',
+                        description: 'Build your cybersecurity knowledge.',
+                        icon: Icons.school_outlined,
+                        onTap: () {
+                          _openScreen(
+                            const LearnSecurityScreen(),
+                          );
+                        },
+                      ),
                     ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: QuickActionCard(
-                      title: 'Report Crime',
-                      description: 'Report a cybercrime to Sentri.',
-                      icon: Icons.report_outlined,
-                      onTap: () {
-                        _openScreen(const ReportCrimeScreen());
-                      },
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: QuickActionCard(
+                        title: 'Report Crime',
+                        description: 'Report a cybercrime to Sentri.',
+                        icon: Icons.report_outlined,
+                        onTap: () {
+                          _openScreen(
+                            const ReportCrimeScreen(),
+                          );
+                        },
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
               const SizedBox(height: 28),
               _buildSectionTitle(
@@ -754,7 +920,9 @@ class _HomeScreenState extends State<HomeScreen> {
                 title: 'Recent Reports',
                 actionLabel: 'View All',
                 onAction: () {
-                  _openScreen(const MyReportsScreen());
+                  _openScreen(
+                    const MyReportsScreen(),
+                  );
                 },
               ),
               const SizedBox(height: 12),
