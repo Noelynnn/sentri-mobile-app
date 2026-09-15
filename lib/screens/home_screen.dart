@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
 
+import '../config/api_config.dart';
+
 import '../models/report.dart';
 
 import '../services/report_api_service.dart';
 import '../services/security_activity_service.dart';
 import '../services/notification_service.dart';
+import '../services/profile_api_service.dart';
 
 import '../theme/app_colors.dart';
 
@@ -18,6 +21,7 @@ import 'report_crime_screen.dart';
 import 'my_reports_screen.dart';
 import 'security_activity_screen.dart';
 import 'notifications_screen.dart';
+import 'profile_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   final String userName;
@@ -36,6 +40,7 @@ class _HomeScreenState extends State<HomeScreen> {
   final SecurityActivityService _securityActivityService =
       SecurityActivityService();
   final NotificationService _notificationService = NotificationService();
+  final ProfileApiService _profileService = ProfileApiService();
 
   List<Report> _recentReports = [];
   bool _reportsLoading = true;
@@ -44,6 +49,22 @@ class _HomeScreenState extends State<HomeScreen> {
   bool _securityLoading = true;
 
   int _unreadNotificationCount = 0;
+
+  String? _profileImagePath;
+
+  String? _profileImageUrl() {
+    if (_profileImagePath == null || _profileImagePath!.isEmpty) {
+      return null;
+    }
+
+    if (_profileImagePath!.startsWith('http://') ||
+        _profileImagePath!.startsWith('https://')) {
+      return _profileImagePath;
+    }
+
+    return '${ApiConfig.baseUrl}/'
+        '${_profileImagePath!.replaceFirst('/', '')}';
+  }
 
   final List<String> _cyberTips = [
     'Never share your OTP, PIN, or password with anyone.',
@@ -67,6 +88,7 @@ class _HomeScreenState extends State<HomeScreen> {
       _loadSecuritySummary(),
       _loadUnreadNotifications(),
     ]);
+    _loadProfileImage();
   }
 
   Future<void> _loadRecentReports() async {
@@ -127,6 +149,24 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
+  Future<void> _loadProfileImage() async {
+    try {
+      final profile = await _profileService.getProfile();
+
+      if (!mounted) return;
+
+      setState(() {
+        _profileImagePath = profile['profile_image_path'] as String?;
+      });
+    } catch (_) {
+      if (!mounted) return;
+
+      setState(() {
+        _profileImagePath = null;
+      });
+    }
+  }
+
   Future<void> _refreshHome() async {
     await _loadHomeData();
   }
@@ -158,6 +198,56 @@ class _HomeScreenState extends State<HomeScreen> {
       if (!mounted) return;
       _loadHomeData();
     });
+  }
+
+  Widget _buildHomeAvatar({
+    required String firstLetter,
+  }) {
+    final imageUrl = _profileImageUrl();
+
+    if (imageUrl == null) {
+      return Text(
+        firstLetter,
+        style: const TextStyle(
+          color: AppColors.white,
+          fontWeight: FontWeight.w700,
+          fontSize: 16,
+        ),
+      );
+    }
+
+    return ClipOval(
+      child: Image.network(
+        imageUrl,
+        width: 42,
+        height: 42,
+        fit: BoxFit.cover,
+        loadingBuilder: (context, child, loadingProgress) {
+          if (loadingProgress == null) {
+            return child;
+          }
+
+          return Text(
+            firstLetter,
+            style: const TextStyle(
+              color: AppColors.white,
+              fontWeight: FontWeight.w700,
+              fontSize: 16,
+            ),
+          );
+        },
+        errorBuilder: (context, error, stackTrace) {
+          return Text(
+            firstLetter,
+            style: const TextStyle(
+              color: AppColors.white,
+              fontWeight: FontWeight.w700,
+              fontSize: 16,
+            ),
+          );
+        },
+      ),
+    );
   }
 
   Widget _buildHeader() {
@@ -251,10 +341,14 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ),
 
-        //User Profile Circle Avatar
+        // User Profile Circle Avatar
         GestureDetector(
           onTap: () {
-            // Profile screen will be connected later.
+            _openScreen(
+              ProfileScreen(
+                userName: widget.userName,
+              ),
+            );
           },
           child: Container(
             width: 42,
@@ -275,13 +369,8 @@ class _HomeScreenState extends State<HomeScreen> {
               ],
             ),
             alignment: Alignment.center,
-            child: Text(
-              firstLetter,
-              style: const TextStyle(
-                color: AppColors.white,
-                fontWeight: FontWeight.w700,
-                fontSize: 16,
-              ),
+            child: _buildHomeAvatar(
+              firstLetter: firstLetter,
             ),
           ),
         ),
