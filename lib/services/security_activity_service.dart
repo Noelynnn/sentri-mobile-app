@@ -11,6 +11,8 @@ class SecurityActivitySummary {
   final String message;
   final bool recentHighRisk;
   final bool recentSuspicious;
+  final int recentHighRiskCount;
+  final int recentSuspiciousCount;
   final int activityCount;
 
   const SecurityActivitySummary({
@@ -19,6 +21,8 @@ class SecurityActivitySummary {
     required this.message,
     required this.recentHighRisk,
     required this.recentSuspicious,
+    required this.recentHighRiskCount,
+    required this.recentSuspiciousCount,
     required this.activityCount,
   });
 
@@ -26,12 +30,14 @@ class SecurityActivitySummary {
     Map<String, dynamic> json,
   ) {
     return SecurityActivitySummary(
-      score: json['score'] as int,
+      score: json['score'] as int? ?? 100,
       status: json['status'] as String,
       message: json['message'] as String,
-      recentHighRisk: json['recent_high_risk'] as bool,
-      recentSuspicious: json['recent_suspicious'] as bool,
-      activityCount: json['activity_count'] as int,
+      recentHighRisk: json['recent_high_risk'] as bool? ?? false,
+      recentSuspicious: json['recent_suspicious'] as bool? ?? false,
+      recentHighRiskCount: json['recent_high_risk_count'] as int? ?? 0,
+      recentSuspiciousCount: json['recent_suspicious_count'] as int? ?? 0,
+      activityCount: json['activity_count'] as int? ?? 0,
     );
   }
 }
@@ -88,7 +94,10 @@ class SecurityActivityService {
     }
 
     _handleError(response);
-    throw Exception('Unable to load security summary.');
+
+    throw Exception(
+      'Unable to load security summary.',
+    );
   }
 
   Future<List<SecurityActivity>> getActivity() async {
@@ -114,7 +123,10 @@ class SecurityActivityService {
     }
 
     _handleError(response);
-    throw Exception('Unable to load security activity.');
+
+    throw Exception(
+      'Unable to load security activity.',
+    );
   }
 
   Future<String> _getToken() async {
@@ -131,14 +143,18 @@ class SecurityActivityService {
     return token;
   }
 
-  Map<String, String> _headers(String token) {
+  Map<String, String> _headers(
+    String token,
+  ) {
     return {
       'Authorization': 'Bearer $token',
       'Content-Type': 'application/json',
     };
   }
 
-  void _handleError(http.Response response) {
+  void _handleError(
+    http.Response response,
+  ) {
     if (response.statusCode == 401) {
       throw Exception(
         'Your session has expired. Please log in again.',

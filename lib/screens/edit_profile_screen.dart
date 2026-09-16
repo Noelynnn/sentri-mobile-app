@@ -24,7 +24,9 @@ class EditProfileScreen extends StatefulWidget {
 class _EditProfileScreenState extends State<EditProfileScreen> {
   final _formKey = GlobalKey<FormState>();
 
-  final _nameController = TextEditingController();
+  final _firstNameController = TextEditingController();
+
+  final _lastNameController = TextEditingController();
 
   final ProfileApiService _profileService = ProfileApiService();
 
@@ -41,14 +43,26 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   void initState() {
     super.initState();
 
-    _nameController.text = widget.user.fullName;
+    final nameParts = widget.user.fullName
+        .trim()
+        .split(' ')
+        .where(
+          (part) => part.isNotEmpty,
+        )
+        .toList();
+
+    _firstNameController.text = nameParts.isNotEmpty ? nameParts.first : '';
+
+    _lastNameController.text =
+        nameParts.length > 1 ? nameParts.sublist(1).join(' ') : '';
 
     _currentImagePath = widget.user.profileImagePath;
   }
 
   @override
   void dispose() {
-    _nameController.dispose();
+    _firstNameController.dispose();
+    _lastNameController.dispose();
     super.dispose();
   }
 
@@ -90,9 +104,17 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   }
 
   Future<void> _saveProfile() async {
+    FocusScope.of(context).unfocus();
+
     if (!_formKey.currentState!.validate()) {
       return;
     }
+
+    final firstName = _firstNameController.text.trim();
+
+    final lastName = _lastNameController.text.trim();
+
+    final fullName = '$firstName $lastName'.trim();
 
     setState(() {
       _isSaving = true;
@@ -109,14 +131,12 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       }
 
       Map<String, dynamic> response = await _profileService.updateProfile(
-        fullName: _nameController.text.trim(),
+        fullName: fullName,
         imageBytes: imageBytes,
         imageFilename: imageFilename,
       );
 
-      AuthUser updatedUser = AuthUser.fromJson(
-        response,
-      );
+      AuthUser updatedUser = AuthUser.fromJson(response);
 
       if (_removeCurrentImage && _selectedImage == null) {
         final removedResponse = await _profileService.removeProfileImage();
@@ -132,8 +152,6 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
 
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          backgroundColor: AppColors.safe,
-          behavior: SnackBarBehavior.floating,
           content: Text(
             'Profile updated successfully.',
           ),
@@ -151,22 +169,18 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          backgroundColor: AppColors.highRisk,
-          behavior: SnackBarBehavior.floating,
           content: Text(e.message),
         ),
       );
-    } catch (e) {
+    } catch (_) {
       if (!mounted) {
         return;
       }
 
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          backgroundColor: AppColors.highRisk,
-          behavior: SnackBarBehavior.floating,
+        const SnackBar(
           content: Text(
-            'Unable to update profile: $e',
+            'Unable to update your profile. Please try again.',
           ),
         ),
       );
@@ -180,20 +194,16 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   }
 
   Widget _buildInitials() {
-    final parts = _nameController.text
-        .trim()
-        .split(' ')
-        .where(
-          (part) => part.isNotEmpty,
-        )
-        .toList();
+    final first = _firstNameController.text.trim();
+
+    final last = _lastNameController.text.trim();
 
     String initials = 'U';
 
-    if (parts.length >= 2) {
-      initials = '${parts.first[0]}${parts.last[0]}'.toUpperCase();
-    } else if (parts.isNotEmpty) {
-      initials = parts.first[0].toUpperCase();
+    if (first.isNotEmpty && last.isNotEmpty) {
+      initials = '${first[0]}${last[0]}'.toUpperCase();
+    } else if (first.isNotEmpty) {
+      initials = first[0].toUpperCase();
     }
 
     return Text(
@@ -210,10 +220,18 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     if (_selectedImage != null) {
       return FutureBuilder<Uint8List>(
         future: _selectedImage!.readAsBytes(),
-        builder: (context, snapshot) {
+        builder: (
+          context,
+          snapshot,
+        ) {
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return const CircularProgressIndicator(
-              color: AppColors.white,
+            return const SizedBox(
+              width: 28,
+              height: 28,
+              child: CircularProgressIndicator(
+                strokeWidth: 2.4,
+                color: AppColors.white,
+              ),
             );
           }
 
@@ -242,11 +260,18 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
           width: 112,
           height: 112,
           fit: BoxFit.cover,
-          errorBuilder: (
+          loadingBuilder: (
             context,
-            error,
-            stackTrace,
+            child,
+            loadingProgress,
           ) {
+            if (loadingProgress == null) {
+              return child;
+            }
+
+            return _buildInitials();
+          },
+          errorBuilder: (context, error, stackTrace) {
             return _buildInitials();
           },
         ),
@@ -258,20 +283,12 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final hasPhoto = _currentImagePath != null || _selectedImage != null;
+
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
-        title: const Text(
-          'Edit Profile',
-          style: TextStyle(
-            fontWeight: FontWeight.w700,
-            color: AppColors.textDark,
-          ),
-        ),
-        backgroundColor: AppColors.background,
-        foregroundColor: AppColors.textDark,
-        elevation: 0,
-        scrolledUnderElevation: 0,
+        title: const Text('Edit Profile'),
       ),
       body: SafeArea(
         child: ListView(
@@ -286,9 +303,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
               padding: const EdgeInsets.all(24),
               decoration: BoxDecoration(
                 color: AppColors.white,
-                borderRadius: BorderRadius.circular(
-                  26,
-                ),
+                borderRadius: BorderRadius.circular(26),
                 border: Border.all(
                   color: AppColors.border,
                 ),
@@ -305,9 +320,26 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                     alignment: Alignment.center,
                     child: _buildProfileImage(),
                   ),
-                  const SizedBox(
-                    height: 16,
+                  const SizedBox(height: 16),
+                  const Text(
+                    'Profile picture',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w800,
+                      color: AppColors.textDark,
+                    ),
                   ),
+                  const SizedBox(height: 5),
+                  const Text(
+                    'Choose a clear photo that represents you.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 13,
+                      height: 1.4,
+                      color: AppColors.textSecondary,
+                    ),
+                  ),
+                  const SizedBox(height: 14),
                   OutlinedButton.icon(
                     onPressed: _isSaving ? null : _pickImage,
                     icon: const Icon(
@@ -316,42 +348,28 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                     label: const Text(
                       'Change Photo',
                     ),
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: AppColors.primary,
-                      side: const BorderSide(
-                        color: AppColors.border,
-                      ),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(
-                          14,
-                        ),
-                      ),
-                    ),
                   ),
-                  if (_currentImagePath != null || _selectedImage != null)
+                  if (hasPhoto) ...[
+                    const SizedBox(height: 2),
                     TextButton(
                       onPressed: _isSaving ? null : _removeImage,
+                      style: TextButton.styleFrom(
+                        foregroundColor: AppColors.highRisk,
+                      ),
                       child: const Text(
                         'Remove Photo',
-                        style: TextStyle(
-                          color: AppColors.highRisk,
-                          fontWeight: FontWeight.w600,
-                        ),
                       ),
                     ),
+                  ],
                 ],
               ),
             ),
-            const SizedBox(
-              height: 24,
-            ),
+            const SizedBox(height: 24),
             Container(
               padding: const EdgeInsets.all(18),
               decoration: BoxDecoration(
                 color: AppColors.white,
-                borderRadius: BorderRadius.circular(
-                  22,
-                ),
+                borderRadius: BorderRadius.circular(22),
                 border: Border.all(
                   color: AppColors.border,
                 ),
@@ -369,77 +387,83 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                         color: AppColors.textDark,
                       ),
                     ),
-                    const SizedBox(
-                      height: 18,
-                    ),
-                    TextFormField(
-                      controller: _nameController,
-                      enabled: !_isSaving,
-                      textCapitalization: TextCapitalization.words,
-                      style: const TextStyle(
-                        color: AppColors.textDark,
+                    const SizedBox(height: 6),
+                    const Text(
+                      'Keep your Sentri account information up to date.',
+                      style: TextStyle(
+                        fontSize: 13,
+                        height: 1.4,
+                        color: AppColors.textSecondary,
                       ),
-                      decoration: InputDecoration(
-                        labelText: 'Full Name',
-                        prefixIcon: const Icon(
-                          Icons.person_outline_rounded,
-                          color: AppColors.primary,
-                        ),
-                        filled: true,
-                        fillColor: AppColors.background,
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(
-                            14,
+                    ),
+                    const SizedBox(height: 18),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: TextFormField(
+                            controller: _firstNameController,
+                            enabled: !_isSaving,
+                            textCapitalization: TextCapitalization.words,
+                            textInputAction: TextInputAction.next,
+                            decoration: const InputDecoration(
+                              labelText: 'First Name',
+                              prefixIcon: Icon(
+                                Icons.person_outline_rounded,
+                                color: AppColors.primary,
+                              ),
+                            ),
+                            validator: (value) {
+                              final name = value?.trim() ?? '';
+
+                              if (name.length < 2) {
+                                return 'Required';
+                              }
+
+                              return null;
+                            },
                           ),
-                          borderSide: BorderSide.none,
                         ),
-                      ),
-                      validator: (value) {
-                        final name = value?.trim() ?? '';
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: TextFormField(
+                            controller: _lastNameController,
+                            enabled: !_isSaving,
+                            textCapitalization: TextCapitalization.words,
+                            textInputAction: TextInputAction.next,
+                            decoration: const InputDecoration(
+                              labelText: 'Last Name',
+                            ),
+                            validator: (value) {
+                              final name = value?.trim() ?? '';
 
-                        if (name.length < 2) {
-                          return 'Enter your full name.';
-                        }
+                              if (name.length < 2) {
+                                return 'Required';
+                              }
 
-                        if (name.length > 100) {
-                          return 'Name is too long.';
-                        }
-
-                        return null;
-                      },
+                              return null;
+                            },
+                          ),
+                        ),
+                      ],
                     ),
-                    const SizedBox(
-                      height: 16,
-                    ),
+                    const SizedBox(height: 16),
                     TextFormField(
                       initialValue: widget.user.email,
                       enabled: false,
-                      style: const TextStyle(
-                        color: AppColors.textSecondary,
-                      ),
-                      decoration: InputDecoration(
+                      decoration: const InputDecoration(
                         labelText: 'Email Address',
-                        prefixIcon: const Icon(
+                        prefixIcon: Icon(
                           Icons.email_outlined,
                           color: AppColors.textSecondary,
                         ),
-                        filled: true,
-                        fillColor: AppColors.background,
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(
-                            14,
-                          ),
-                          borderSide: BorderSide.none,
-                        ),
                       ),
                     ),
-                    const SizedBox(
-                      height: 10,
-                    ),
+                    const SizedBox(height: 10),
                     const Text(
                       'Your email address is currently read-only.',
                       style: TextStyle(
                         fontSize: 12,
+                        height: 1.35,
                         color: AppColors.textSecondary,
                       ),
                     ),
@@ -447,26 +471,12 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                 ),
               ),
             ),
-            const SizedBox(
-              height: 24,
-            ),
+            const SizedBox(height: 24),
             SizedBox(
-              height: 54,
+              width: double.infinity,
+              height: 52,
               child: ElevatedButton(
                 onPressed: _isSaving ? null : _saveProfile,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primary,
-                  foregroundColor: AppColors.white,
-                  disabledBackgroundColor: AppColors.primary.withOpacity(
-                    0.45,
-                  ),
-                  elevation: 0,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(
-                      16,
-                    ),
-                  ),
-                ),
                 child: _isSaving
                     ? const SizedBox(
                         width: 21,
@@ -478,10 +488,6 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                       )
                     : const Text(
                         'Save Changes',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w700,
-                        ),
                       ),
               ),
             ),
