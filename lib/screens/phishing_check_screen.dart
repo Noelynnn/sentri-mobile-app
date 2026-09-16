@@ -56,8 +56,10 @@ class _PhishingCheckScreenState extends State<PhishingCheckScreen> {
         return;
       }
 
-      final recommendation = _recommendationService.forPhishing(result);
-
+      final recommendation = _recommendationService.forPhishing(
+        result,
+        url: _urlController.text.trim(),
+      );
       setState(() {
         _analysisResult = result;
         _recommendation = recommendation;

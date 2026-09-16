@@ -99,8 +99,10 @@ class _CheckScamScreenState extends State<CheckScamScreen> {
         return;
       }
 
-      final recommendation = _recommendationService.forScam(result);
-
+      final recommendation = _recommendationService.forScam(
+        result,
+        sourceText: message,
+      );
       setState(() {
         _analysisResult = result;
         _recommendation = recommendation;
