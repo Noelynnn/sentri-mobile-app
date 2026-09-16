@@ -1,10 +1,15 @@
 import 'package:flutter/material.dart';
 
 import '../models/analysis_result.dart';
+
 import '../services/auth_api_service.dart';
 import '../services/phishing_analysis_service.dart';
+import '../services/security_recommendation_service.dart';
+
 import '../theme/app_colors.dart';
+
 import '../widgets/phishing_result_card.dart';
+import '../widgets/security_recommendation_card.dart';
 
 class PhishingCheckScreen extends StatefulWidget {
   const PhishingCheckScreen({super.key});
@@ -19,9 +24,12 @@ class _PhishingCheckScreenState extends State<PhishingCheckScreen> {
 
   final PhishingAnalysisService _phishingAnalysisService =
       PhishingAnalysisService();
+  final SecurityRecommendationService _recommendationService =
+      const SecurityRecommendationService();
 
   bool _isLoading = false;
   AnalysisResult? _analysisResult;
+  SecurityRecommendation? _recommendation;
 
   @override
   void dispose() {
@@ -48,8 +56,11 @@ class _PhishingCheckScreenState extends State<PhishingCheckScreen> {
         return;
       }
 
+      final recommendation = _recommendationService.forPhishing(result);
+
       setState(() {
         _analysisResult = result;
+        _recommendation = recommendation;
       });
     } on ApiException catch (e) {
       if (!mounted) {
@@ -286,6 +297,12 @@ class _PhishingCheckScreenState extends State<PhishingCheckScreen> {
               PhishingResultCard(
                 result: _analysisResult!,
               ),
+              if (_recommendation != null) ...[
+                const SizedBox(height: 16),
+                SecurityRecommendationCard(
+                  recommendation: _recommendation!,
+                ),
+              ],
             ],
           ],
         ),

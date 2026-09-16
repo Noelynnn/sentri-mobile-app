@@ -13,6 +13,7 @@ import 'my_reports_screen.dart';
 import 'notifications_screen.dart';
 import 'saved_lessons_screen.dart';
 import 'security_activity_screen.dart';
+import 'settings_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   final String userName;
@@ -733,18 +734,23 @@ class _ProfileScreenState extends State<ProfileScreen> {
               icon: Icons.settings_outlined,
               title: 'Settings',
               description: 'Manage your Sentri preferences.',
-              onTap: () {
-                ScaffoldMessenger.of(
+              onTap: () async {
+                final updatedUser = await Navigator.push<AuthUser>(
                   context,
-                ).showSnackBar(
-                  const SnackBar(
-                    backgroundColor: AppColors.primary,
-                    behavior: SnackBarBehavior.floating,
-                    content: Text(
-                      'Settings are coming next.',
+                  MaterialPageRoute(
+                    builder: (_) => SettingsScreen(
+                      user: _user!,
                     ),
                   ),
                 );
+
+                if (!mounted || updatedUser == null) {
+                  return;
+                }
+
+                setState(() {
+                  _user = updatedUser;
+                });
               },
             ),
           ],

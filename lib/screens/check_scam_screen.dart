@@ -2,10 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 
 import '../models/analysis_result.dart';
+
 import '../services/auth_api_service.dart';
 import '../services/scam_analysis_service.dart';
+import '../services/security_recommendation_service.dart';
+
 import '../theme/app_colors.dart';
+
 import '../widgets/scam_result_card.dart';
+import '../widgets/security_recommendation_card.dart';
 
 class CheckScamScreen extends StatefulWidget {
   const CheckScamScreen({super.key});
@@ -19,12 +24,15 @@ class _CheckScamScreenState extends State<CheckScamScreen> {
   final _messageController = TextEditingController();
 
   final ScamAnalysisService _scamAnalysisService = ScamAnalysisService();
+  final SecurityRecommendationService _recommendationService =
+      const SecurityRecommendationService();
 
   final ImagePicker _picker = ImagePicker();
 
   bool _isLoading = false;
   XFile? _selectedImage;
   AnalysisResult? _analysisResult;
+  SecurityRecommendation? _recommendation;
 
   @override
   void dispose() {
@@ -91,8 +99,11 @@ class _CheckScamScreenState extends State<CheckScamScreen> {
         return;
       }
 
+      final recommendation = _recommendationService.forScam(result);
+
       setState(() {
         _analysisResult = result;
+        _recommendation = recommendation;
       });
     } on ApiException catch (e) {
       if (!mounted) {
@@ -296,6 +307,12 @@ class _CheckScamScreenState extends State<CheckScamScreen> {
               ScamResultCard(
                 result: _analysisResult!,
               ),
+              if (_recommendation != null) ...[
+                const SizedBox(height: 16),
+                SecurityRecommendationCard(
+                  recommendation: _recommendation!,
+                ),
+              ],
             ],
           ],
         ),
