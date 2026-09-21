@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../config/api_config.dart';
 import '../models/auth_response.dart';
 import '../services/auth_api_service.dart';
 import '../theme/app_colors.dart';
@@ -55,51 +56,98 @@ class _SettingsScreenState extends State<SettingsScreen> {
       context: context,
       builder: (context) {
         return AlertDialog(
+          icon: Container(
+            width: 52,
+            height: 52,
+            decoration: BoxDecoration(
+              color: AppColors.highRiskBackground,
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: const Icon(
+              Icons.logout_rounded,
+              color: AppColors.highRisk,
+              size: 25,
+            ),
+          ),
           title: const Text(
-            'Log Out',
+            'Log Out?',
+            textAlign: TextAlign.center,
             style: TextStyle(
               fontWeight: FontWeight.w800,
               color: AppColors.textDark,
             ),
           ),
           content: const Text(
-            'Are you sure you want to log out of Sentri?',
+            'You will need to sign in again to access your Sentri account.',
+            textAlign: TextAlign.center,
             style: TextStyle(
-              color: AppColors.textSecondary,
+              fontSize: 14,
               height: 1.45,
+              color: AppColors.textSecondary,
             ),
           ),
+          actionsPadding: const EdgeInsets.fromLTRB(
+            20,
+            4,
+            20,
+            18,
+          ),
           actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.pop(context, false);
-              },
-              child: const Text(
-                'Cancel',
-                style: TextStyle(
-                  color: AppColors.textSecondary,
-                  fontWeight: FontWeight.w600,
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: () {
+                      Navigator.pop(context, false);
+                    },
+                    style: OutlinedButton.styleFrom(
+                      minimumSize: const Size(
+                        double.infinity,
+                        48,
+                      ),
+                      foregroundColor: AppColors.textDark,
+                      side: const BorderSide(
+                        color: AppColors.border,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                    ),
+                    child: const Text(
+                      'Cancel',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
                 ),
-              ),
-            ),
-            ElevatedButton(
-              onPressed: () {
-                Navigator.pop(context, true);
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.highRisk,
-                foregroundColor: AppColors.white,
-                elevation: 0,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: ElevatedButton(
+                    onPressed: () {
+                      Navigator.pop(context, true);
+                    },
+                    style: ElevatedButton.styleFrom(
+                      minimumSize: const Size(
+                        double.infinity,
+                        48,
+                      ),
+                      backgroundColor: AppColors.highRisk,
+                      foregroundColor: AppColors.white,
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                    ),
+                    child: const Text(
+                      'Log Out',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
                 ),
-              ),
-              child: const Text(
-                'Log Out',
-                style: TextStyle(
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
+              ],
             ),
           ],
         );
@@ -143,7 +191,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          backgroundColor: AppColors.highRisk,
           behavior: SnackBarBehavior.floating,
           content: Text(e.message),
         ),
@@ -159,7 +206,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          backgroundColor: AppColors.highRisk,
           behavior: SnackBarBehavior.floating,
           content: Text(
             'Unable to log out. Please try again.',
@@ -174,40 +220,106 @@ class _SettingsScreenState extends State<SettingsScreen> {
       context: context,
       builder: (context) {
         return AlertDialog(
+          titlePadding: const EdgeInsets.fromLTRB(
+            24,
+            24,
+            24,
+            8,
+          ),
+          contentPadding: const EdgeInsets.fromLTRB(
+            24,
+            8,
+            24,
+            8,
+          ),
+          actionsPadding: const EdgeInsets.fromLTRB(
+            20,
+            4,
+            20,
+            16,
+          ),
           title: Row(
             children: [
               Container(
-                width: 42,
-                height: 42,
+                width: 46,
+                height: 46,
                 decoration: BoxDecoration(
                   color: AppColors.primaryLight,
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(14),
                 ),
                 child: const Icon(
                   Icons.shield_outlined,
                   color: AppColors.primary,
+                  size: 25,
                 ),
               ),
               const SizedBox(width: 12),
-              const Text(
-                'About Sentri',
-                style: TextStyle(
-                  fontWeight: FontWeight.w800,
-                  color: AppColors.textDark,
+              const Expanded(
+                child: Text(
+                  'About Sentri',
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w800,
+                    color: AppColors.textDark,
+                  ),
                 ),
               ),
             ],
           ),
-          content: const Text(
-            'Sentri is your digital safety companion, '
-            'designed to help you identify scams, check '
-            'suspicious messages and links, learn cybersecurity, '
-            'and report cybercrime.',
-            style: TextStyle(
-              fontSize: 14,
-              height: 1.5,
-              color: AppColors.textSecondary,
-            ),
+          content: const Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Your digital safety companion',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.primary,
+                ),
+              ),
+              SizedBox(height: 10),
+              Text(
+                'Sentri is designed to help you stay safer online by '
+                'identifying suspicious scams and phishing attempts, '
+                'building your cybersecurity awareness, and giving '
+                'you a place to report cybercrime.',
+                style: TextStyle(
+                  fontSize: 14,
+                  height: 1.5,
+                  color: AppColors.textSecondary,
+                ),
+              ),
+              SizedBox(height: 18),
+              Text(
+                'What you can do with Sentri',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w800,
+                  color: AppColors.textDark,
+                ),
+              ),
+              SizedBox(height: 10),
+              _AboutFeature(
+                icon: Icons.search_rounded,
+                text: 'Check suspicious messages and links.',
+              ),
+              SizedBox(height: 9),
+              _AboutFeature(
+                icon: Icons.school_outlined,
+                text: 'Learn practical cybersecurity skills.',
+              ),
+              SizedBox(height: 9),
+              _AboutFeature(
+                icon: Icons.report_outlined,
+                text: 'Report suspected cybercrime.',
+              ),
+              SizedBox(height: 9),
+              _AboutFeature(
+                icon: Icons.notifications_none_rounded,
+                text: 'Receive security alerts and reminders.',
+              ),
+            ],
           ),
           actions: [
             TextButton(
@@ -237,10 +349,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
       child: Text(
         title,
         style: const TextStyle(
-          fontSize: 13,
+          fontSize: 12.5,
           fontWeight: FontWeight.w800,
           color: AppColors.textSecondary,
-          letterSpacing: 0.2,
+          letterSpacing: 0.5,
         ),
       ),
     );
@@ -250,8 +362,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
     required IconData icon,
     required String title,
     required String description,
-    required VoidCallback onTap,
+    VoidCallback? onTap,
     Color? iconColor,
+    Widget? trailing,
   }) {
     final color = iconColor ?? AppColors.primary;
 
@@ -300,6 +413,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     const SizedBox(height: 4),
                     Text(
                       description,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
                         fontSize: 12.5,
                         height: 1.35,
@@ -309,10 +424,17 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   ],
                 ),
               ),
-              const Icon(
-                Icons.chevron_right_rounded,
-                color: AppColors.textSecondary,
-              ),
+              const SizedBox(width: 10),
+              if (trailing != null)
+                trailing
+              else
+                Icon(
+                  onTap == null
+                      ? Icons.lock_outline_rounded
+                      : Icons.chevron_right_rounded,
+                  color: AppColors.textSecondary,
+                  size: 21,
+                ),
             ],
           ),
         ),
@@ -332,24 +454,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
       ),
       child: Row(
         children: [
-          Container(
-            width: 52,
-            height: 52,
-            decoration: const BoxDecoration(
-              color: AppColors.primary,
-              shape: BoxShape.circle,
-            ),
-            alignment: Alignment.center,
-            child: Text(
-              _initials,
-              style: const TextStyle(
-                color: AppColors.white,
-                fontSize: 17,
-                fontWeight: FontWeight.w800,
-              ),
-            ),
+          _buildAvatar(
+            size: 58,
           ),
-          const SizedBox(width: 13),
+          const SizedBox(width: 14),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -374,12 +482,180 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     color: AppColors.textSecondary,
                   ),
                 ),
+                const SizedBox(height: 8),
+                GestureDetector(
+                  onTap: _isLoggingOut ? null : _editProfile,
+                  child: const Text(
+                    'Edit profile',
+                    style: TextStyle(
+                      fontSize: 12.5,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.primary,
+                    ),
+                  ),
+                ),
               ],
             ),
+          ),
+          const Icon(
+            Icons.verified_user_outlined,
+            color: AppColors.safe,
+            size: 22,
           ),
         ],
       ),
     );
+  }
+
+  Widget _buildAvatar({
+    double size = 58,
+  }) {
+    final imageUrl = _imageUrl(
+      _user.profileImagePath,
+    );
+
+    if (imageUrl == null) {
+      return _buildInitialAvatar(size);
+    }
+
+    return ClipOval(
+      child: Image.network(
+        imageUrl,
+        width: size,
+        height: size,
+        fit: BoxFit.cover,
+        loadingBuilder: (
+          context,
+          child,
+          loadingProgress,
+        ) {
+          if (loadingProgress == null) {
+            return child;
+          }
+
+          return _buildInitialAvatar(size);
+        },
+        errorBuilder: (
+          context,
+          error,
+          stackTrace,
+        ) {
+          return _buildInitialAvatar(size);
+        },
+      ),
+    );
+  }
+
+  Widget _buildInitialAvatar(
+    double size,
+  ) {
+    return Container(
+      width: size,
+      height: size,
+      decoration: const BoxDecoration(
+        color: AppColors.primary,
+        shape: BoxShape.circle,
+      ),
+      alignment: Alignment.center,
+      child: Text(
+        _initials,
+        style: TextStyle(
+          color: AppColors.white,
+          fontSize: size * 0.30,
+          fontWeight: FontWeight.w800,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildLogoutTile() {
+    return Material(
+      color: AppColors.white,
+      borderRadius: BorderRadius.circular(20),
+      child: InkWell(
+        onTap: _isLoggingOut ? null : _confirmLogout,
+        borderRadius: BorderRadius.circular(20),
+        child: Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(
+              color: AppColors.highRisk.withOpacity(0.20),
+            ),
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 46,
+                height: 46,
+                decoration: BoxDecoration(
+                  color: AppColors.highRiskBackground,
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: const Icon(
+                  Icons.logout_rounded,
+                  color: AppColors.highRisk,
+                  size: 23,
+                ),
+              ),
+              const SizedBox(width: 13),
+              const Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Log Out',
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.highRisk,
+                      ),
+                    ),
+                    SizedBox(height: 4),
+                    Text(
+                      'Sign out of your Sentri account.',
+                      style: TextStyle(
+                        fontSize: 12.5,
+                        height: 1.35,
+                        color: AppColors.textSecondary,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              if (_isLoggingOut)
+                const SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: AppColors.highRisk,
+                  ),
+                )
+              else
+                const Icon(
+                  Icons.chevron_right_rounded,
+                  color: AppColors.textSecondary,
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  String? _imageUrl(String? path) {
+    if (path == null || path.isEmpty) {
+      return null;
+    }
+
+    if (path.startsWith('http://') || path.startsWith('https://')) {
+      return path;
+    }
+
+    final normalizedPath = path.startsWith('/') ? path : '/$path';
+
+    return '${ApiConfig.baseUrl}$normalizedPath';
   }
 
   String get _initials {
@@ -405,179 +681,151 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      appBar: AppBar(
-        title: const Text(
-          'Settings',
-          style: TextStyle(
-            fontWeight: FontWeight.w700,
-            color: AppColors.textDark,
-          ),
-        ),
+    return PopScope<AuthUser>(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) {
+        if (didPop) {
+          return;
+        }
+
+        Navigator.pop(
+          context,
+          _user,
+        );
+      },
+      child: Scaffold(
         backgroundColor: AppColors.background,
-        foregroundColor: AppColors.textDark,
-        elevation: 0,
-        scrolledUnderElevation: 0,
-      ),
-      body: SafeArea(
-        child: ListView(
-          padding: const EdgeInsets.fromLTRB(
-            20,
-            12,
-            20,
-            32,
+        appBar: AppBar(
+          automaticallyImplyLeading: false,
+          leading: IconButton(
+            tooltip: 'Back',
+            onPressed: () {
+              Navigator.pop(
+                context,
+                _user,
+              );
+            },
+            icon: const Icon(
+              Icons.arrow_back_rounded,
+            ),
           ),
-          children: [
-            _buildAccountSummary(),
-            const SizedBox(height: 28),
-            _buildSectionLabel(
-              'ACCOUNT',
+          title: const Text(
+            'Settings',
+            style: TextStyle(
+              fontWeight: FontWeight.w700,
+              color: AppColors.textDark,
             ),
-            _buildSettingTile(
-              icon: Icons.person_outline_rounded,
-              title: 'Edit Profile',
-              description: 'Change your name or profile picture.',
-              onTap: _editProfile,
+          ),
+          backgroundColor: AppColors.background,
+          foregroundColor: AppColors.textDark,
+          elevation: 0,
+          scrolledUnderElevation: 0,
+        ),
+        body: SafeArea(
+          child: ListView(
+            padding: const EdgeInsets.fromLTRB(
+              20,
+              12,
+              20,
+              32,
             ),
-            const SizedBox(height: 12),
-            _buildSettingTile(
-              icon: Icons.email_outlined,
-              title: 'Email Address',
-              description: _user.email,
-              onTap: () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    backgroundColor: AppColors.primary,
-                    behavior: SnackBarBehavior.floating,
-                    content: Text(
-                      'Your email address is currently read-only.',
-                    ),
-                  ),
-                );
-              },
-              iconColor: AppColors.textSecondary,
-            ),
-            const SizedBox(height: 28),
-            _buildSectionLabel(
-              'SECURITY',
-            ),
-            _buildSettingTile(
-              icon: Icons.insights_outlined,
-              title: 'Security Activity',
-              description: 'Review your scam and phishing checks.',
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => const SecurityActivityScreen(),
-                  ),
-                );
-              },
-            ),
-            const SizedBox(height: 12),
-            _buildSettingTile(
-              icon: Icons.notifications_none_rounded,
-              title: 'Notifications',
-              description: 'Review security alerts from Sentri.',
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => const NotificationsScreen(),
-                  ),
-                );
-              },
-            ),
-            const SizedBox(height: 28),
-            _buildSectionLabel(
-              'ABOUT',
-            ),
-            _buildSettingTile(
-              icon: Icons.info_outline_rounded,
-              title: 'About Sentri',
-              description: 'Learn more about your digital safety companion.',
-              onTap: _showAboutSentri,
-            ),
-            const SizedBox(height: 28),
-            _buildSectionLabel(
-              'ACCOUNT ACTIONS',
-            ),
-            Material(
-              color: AppColors.white,
-              borderRadius: BorderRadius.circular(20),
-              child: InkWell(
-                onTap: _isLoggingOut ? null : _confirmLogout,
-                borderRadius: BorderRadius.circular(20),
-                child: Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(
-                      color: AppColors.highRisk.withOpacity(0.20),
-                    ),
-                  ),
-                  child: Row(
-                    children: [
-                      Container(
-                        width: 46,
-                        height: 46,
-                        decoration: BoxDecoration(
-                          color: AppColors.highRiskBackground,
-                          borderRadius: BorderRadius.circular(14),
-                        ),
-                        child: const Icon(
-                          Icons.logout_rounded,
-                          color: AppColors.highRisk,
-                          size: 23,
-                        ),
-                      ),
-                      const SizedBox(width: 13),
-                      const Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Log Out',
-                              style: TextStyle(
-                                fontSize: 15,
-                                fontWeight: FontWeight.w700,
-                                color: AppColors.highRisk,
-                              ),
-                            ),
-                            SizedBox(height: 4),
-                            Text(
-                              'Sign out of your Sentri account.',
-                              style: TextStyle(
-                                fontSize: 12.5,
-                                color: AppColors.textSecondary,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      if (_isLoggingOut)
-                        const SizedBox(
-                          width: 20,
-                          height: 20,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: AppColors.highRisk,
-                          ),
-                        )
-                      else
-                        const Icon(
-                          Icons.chevron_right_rounded,
-                          color: AppColors.textSecondary,
-                        ),
-                    ],
-                  ),
-                ),
+            children: [
+              _buildAccountSummary(),
+              const SizedBox(height: 28),
+              _buildSectionLabel('ACCOUNT'),
+              _buildSettingTile(
+                icon: Icons.person_outline_rounded,
+                title: 'Edit Profile',
+                description: 'Change your name or profile picture.',
+                onTap: _editProfile,
               ),
-            ),
-          ],
+              const SizedBox(height: 12),
+              _buildSettingTile(
+                icon: Icons.email_outlined,
+                title: 'Email Address',
+                description: _user.email,
+                iconColor: AppColors.textSecondary,
+              ),
+              const SizedBox(height: 28),
+              _buildSectionLabel('SECURITY'),
+              _buildSettingTile(
+                icon: Icons.insights_outlined,
+                title: 'Security Activity',
+                description: 'Review your recent scam and phishing checks.',
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const SecurityActivityScreen(),
+                    ),
+                  );
+                },
+              ),
+              const SizedBox(height: 12),
+              _buildSettingTile(
+                icon: Icons.notifications_none_rounded,
+                title: 'Notifications',
+                description: 'View security alerts and activity updates.',
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const NotificationsScreen(),
+                    ),
+                  );
+                },
+              ),
+              const SizedBox(height: 28),
+              _buildSectionLabel('ABOUT'),
+              _buildSettingTile(
+                icon: Icons.info_outline_rounded,
+                title: 'About Sentri',
+                description:
+                    'Learn what Sentri does and how it helps keep you safer online.',
+                onTap: _showAboutSentri,
+              ),
+              const SizedBox(height: 28),
+              _buildSectionLabel('ACCOUNT ACTIONS'),
+              _buildLogoutTile(),
+            ],
+          ),
         ),
       ),
+    );
+  }
+}
+
+class _AboutFeature extends StatelessWidget {
+  final IconData icon;
+  final String text;
+
+  const _AboutFeature({
+    required this.icon,
+    required this.text,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Icon(
+          icon,
+          size: 19,
+          color: AppColors.primary,
+        ),
+        const SizedBox(width: 9),
+        Expanded(
+          child: Text(
+            text,
+            style: const TextStyle(
+              fontSize: 13,
+              height: 1.4,
+              color: AppColors.textSecondary,
+            ),
+          ),
+        ),
+      ],
     );
   }
 }

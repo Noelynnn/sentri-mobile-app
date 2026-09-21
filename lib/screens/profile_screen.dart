@@ -4,7 +4,6 @@ import '../config/api_config.dart';
 import '../models/auth_response.dart';
 import '../services/notification_service.dart';
 import '../services/profile_api_service.dart';
-import '../services/security_activity_service.dart';
 import '../theme/app_colors.dart';
 
 import 'edit_profile_screen.dart';
@@ -28,13 +27,9 @@ class ProfileScreen extends StatefulWidget {
 }
 
 class _ProfileScreenState extends State<ProfileScreen> {
-  final SecurityActivityService _activityService = SecurityActivityService();
-
   final NotificationService _notificationService = NotificationService();
 
   final ProfileApiService _profileService = ProfileApiService();
-
-  SecurityActivitySummary? _securitySummary;
 
   AuthUser? _user;
 
@@ -51,7 +46,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Future<void> _loadProfileData() async {
     try {
       final results = await Future.wait([
-        _activityService.getSummary(),
         _notificationService.getUnreadCount(),
         _profileService.getProfile(),
       ]);
@@ -59,12 +53,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
       if (!mounted) return;
 
       setState(() {
-        _securitySummary = results[0] as SecurityActivitySummary;
-
-        _unreadNotifications = results[1] as int;
+        _unreadNotifications = results[0] as int;
 
         _user = AuthUser.fromJson(
-          results[2] as Map<String, dynamic>,
+          results[1] as Map<String, dynamic>,
         );
 
         _isLoading = false;
@@ -103,15 +95,41 @@ class _ProfileScreenState extends State<ProfileScreen> {
     });
   }
 
-  void _openScreen(Widget screen) {
-    Navigator.push(
+  Future<void> _openScreen(Widget screen) async {
+    await Navigator.push(
       context,
       MaterialPageRoute(
         builder: (_) => screen,
       ),
-    ).then((_) {
-      if (!mounted) return;
-      _loadProfileData();
+    );
+
+    if (!mounted) return;
+
+    await _loadProfileData();
+  }
+
+  Future<void> _openSettings() async {
+    final user = _user;
+
+    if (user == null) {
+      return;
+    }
+
+    final updatedUser = await Navigator.push<AuthUser>(
+      context,
+      MaterialPageRoute(
+        builder: (_) => SettingsScreen(
+          user: user,
+        ),
+      ),
+    );
+
+    if (!mounted || updatedUser == null) {
+      return;
+    }
+
+    setState(() {
+      _user = updatedUser;
     });
   }
 
@@ -138,9 +156,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         .toList();
 
     if (parts.length >= 2) {
-      return '${parts.first[0]}'
-              '${parts.last[0]}'
-          .toUpperCase();
+      return '${parts.first[0]}${parts.last[0]}'.toUpperCase();
     }
 
     return parts.first[0].toUpperCase();
@@ -155,8 +171,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
       return path;
     }
 
-    return '${ApiConfig.baseUrl}/'
-        '${path.replaceFirst('/', '')}';
+    final normalizedPath = path.startsWith('/') ? path : '/$path';
+
+    return '${ApiConfig.baseUrl}$normalizedPath';
   }
 
   Widget _buildAvatar({
@@ -176,14 +193,22 @@ class _ProfileScreenState extends State<ProfileScreen> {
         width: size,
         height: size,
         fit: BoxFit.cover,
-        loadingBuilder: (context, child, loadingProgress) {
+        loadingBuilder: (
+          context,
+          child,
+          loadingProgress,
+        ) {
           if (loadingProgress == null) {
             return child;
           }
 
           return _buildInitialAvatar(size);
         },
-        errorBuilder: (context, error, stackTrace) {
+        errorBuilder: (
+          context,
+          error,
+          stackTrace,
+        ) {
           return _buildInitialAvatar(size);
         },
       ),
@@ -218,9 +243,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
         color: AppColors.white,
-        borderRadius: BorderRadius.circular(
-          26,
-        ),
+        borderRadius: BorderRadius.circular(26),
         border: Border.all(
           color: AppColors.border,
         ),
@@ -236,14 +259,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   shape: BoxShape.circle,
                   boxShadow: [
                     BoxShadow(
-                      color: AppColors.primary.withOpacity(
-                        0.15,
-                      ),
+                      color: AppColors.primary.withOpacity(0.15),
                       blurRadius: 14,
-                      offset: const Offset(
-                        0,
-                        6,
-                      ),
+                      offset: const Offset(0, 6),
                     ),
                   ],
                 ),
@@ -273,9 +291,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ),
             ],
           ),
-          const SizedBox(
-            height: 16,
-          ),
+          const SizedBox(height: 16),
           Text(
             _displayName,
             textAlign: TextAlign.center,
@@ -285,9 +301,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               color: AppColors.textDark,
             ),
           ),
-          const SizedBox(
-            height: 5,
-          ),
+          const SizedBox(height: 5),
           Text(
             _email,
             textAlign: TextAlign.center,
@@ -296,9 +310,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               color: AppColors.textSecondary,
             ),
           ),
-          const SizedBox(
-            height: 16,
-          ),
+          const SizedBox(height: 16),
           OutlinedButton.icon(
             onPressed: _editProfile,
             icon: const Icon(
@@ -308,178 +320,20 @@ class _ProfileScreenState extends State<ProfileScreen> {
               'Edit Profile',
             ),
             style: OutlinedButton.styleFrom(
+              minimumSize: const Size(
+                150,
+                48,
+              ),
               foregroundColor: AppColors.primary,
               side: const BorderSide(
                 color: AppColors.border,
               ),
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(
-                  14,
-                ),
+                borderRadius: BorderRadius.circular(14),
               ),
             ),
           ),
         ],
-      ),
-    );
-  }
-
-  Widget _buildSecurityOverview() {
-    if (_isLoading) {
-      return Container(
-        height: 125,
-        decoration: BoxDecoration(
-          color: AppColors.white,
-          borderRadius: BorderRadius.circular(
-            22,
-          ),
-          border: Border.all(
-            color: AppColors.border,
-          ),
-        ),
-        child: const Center(
-          child: CircularProgressIndicator(
-            color: AppColors.primary,
-          ),
-        ),
-      );
-    }
-
-    final summary = _securitySummary;
-
-    if (summary == null) {
-      return Container(
-        padding: const EdgeInsets.all(
-          18,
-        ),
-        decoration: BoxDecoration(
-          color: AppColors.white,
-          borderRadius: BorderRadius.circular(
-            22,
-          ),
-          border: Border.all(
-            color: AppColors.border,
-          ),
-        ),
-        child: const Text(
-          'Security overview is currently unavailable.',
-          style: TextStyle(
-            fontSize: 13,
-            color: AppColors.textSecondary,
-          ),
-        ),
-      );
-    }
-
-    final scoreColor = summary.score >= 80
-        ? AppColors.safe
-        : summary.score >= 50
-            ? AppColors.suspicious
-            : AppColors.highRisk;
-
-    return GestureDetector(
-      onTap: () {
-        _openScreen(
-          const SecurityActivityScreen(),
-        );
-      },
-      child: Container(
-        padding: const EdgeInsets.all(
-          18,
-        ),
-        decoration: BoxDecoration(
-          color: AppColors.white,
-          borderRadius: BorderRadius.circular(
-            22,
-          ),
-          border: Border.all(
-            color: AppColors.border,
-          ),
-        ),
-        child: Row(
-          children: [
-            Container(
-              width: 56,
-              height: 56,
-              decoration: BoxDecoration(
-                color: scoreColor.withOpacity(
-                  0.10,
-                ),
-                shape: BoxShape.circle,
-              ),
-              child: Icon(
-                Icons.shield_outlined,
-                color: scoreColor,
-                size: 29,
-              ),
-            ),
-            const SizedBox(
-              width: 14,
-            ),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'Security Overview',
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w700,
-                      color: AppColors.textSecondary,
-                    ),
-                  ),
-                  const SizedBox(
-                    height: 4,
-                  ),
-                  Text(
-                    summary.status,
-                    style: TextStyle(
-                      fontSize: 17,
-                      fontWeight: FontWeight.w800,
-                      color: scoreColor,
-                    ),
-                  ),
-                  const SizedBox(
-                    height: 3,
-                  ),
-                  Text(
-                    '${summary.activityCount} security checks recorded',
-                    style: const TextStyle(
-                      fontSize: 12,
-                      color: AppColors.textSecondary,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            Column(
-              children: [
-                Text(
-                  '${summary.score}',
-                  style: TextStyle(
-                    fontSize: 25,
-                    fontWeight: FontWeight.w800,
-                    color: scoreColor,
-                  ),
-                ),
-                const Text(
-                  'score',
-                  style: TextStyle(
-                    fontSize: 11,
-                    color: AppColors.textSecondary,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(
-              width: 4,
-            ),
-            const Icon(
-              Icons.chevron_right_rounded,
-              color: AppColors.textSecondary,
-            ),
-          ],
-        ),
       ),
     );
   }
@@ -493,22 +347,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }) {
     return Material(
       color: AppColors.white,
-      borderRadius: BorderRadius.circular(
-        20,
-      ),
+      borderRadius: BorderRadius.circular(20),
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(
-          20,
-        ),
+        borderRadius: BorderRadius.circular(20),
         child: Container(
-          padding: const EdgeInsets.all(
-            16,
-          ),
+          padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(
-              20,
-            ),
+            borderRadius: BorderRadius.circular(20),
             border: Border.all(
               color: AppColors.border,
             ),
@@ -516,13 +362,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
           child: Row(
             children: [
               Container(
-                width: 44,
-                height: 44,
+                width: 46,
+                height: 46,
                 decoration: BoxDecoration(
                   color: AppColors.primaryLight,
-                  borderRadius: BorderRadius.circular(
-                    14,
-                  ),
+                  borderRadius: BorderRadius.circular(14),
                 ),
                 child: Icon(
                   icon,
@@ -530,9 +374,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   size: 23,
                 ),
               ),
-              const SizedBox(
-                width: 12,
-              ),
+              const SizedBox(width: 13),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -545,9 +387,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         color: AppColors.textDark,
                       ),
                     ),
-                    const SizedBox(
-                      height: 4,
-                    ),
+                    const SizedBox(height: 4),
                     Text(
                       description,
                       style: const TextStyle(
@@ -559,18 +399,21 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   ],
                 ),
               ),
-              if (showBadge)
+              if (showBadge) ...[
+                const SizedBox(width: 8),
                 Container(
+                  constraints: const BoxConstraints(
+                    minWidth: 26,
+                  ),
                   padding: const EdgeInsets.symmetric(
                     horizontal: 8,
                     vertical: 5,
                   ),
                   decoration: BoxDecoration(
                     color: AppColors.highRiskBackground,
-                    borderRadius: BorderRadius.circular(
-                      20,
-                    ),
+                    borderRadius: BorderRadius.circular(20),
                   ),
+                  alignment: Alignment.center,
                   child: Text(
                     '$_unreadNotifications',
                     style: const TextStyle(
@@ -580,12 +423,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     ),
                   ),
                 ),
-              const SizedBox(
-                width: 6,
-              ),
+              ],
+              const SizedBox(width: 8),
               const Icon(
                 Icons.chevron_right_rounded,
                 color: AppColors.textSecondary,
+                size: 22,
               ),
             ],
           ),
@@ -594,23 +437,138 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  Widget _buildSectionLabel(
-    String title,
-  ) {
-    return Text(
-      title,
-      style: const TextStyle(
-        fontSize: 13,
-        fontWeight: FontWeight.w800,
-        color: AppColors.textSecondary,
+  Widget _buildSectionLabel(String title) {
+    return Padding(
+      padding: const EdgeInsets.only(
+        left: 4,
+      ),
+      child: Text(
+        title,
+        style: const TextStyle(
+          fontSize: 12.5,
+          fontWeight: FontWeight.w800,
+          color: AppColors.textSecondary,
+          letterSpacing: 0.5,
+        ),
       ),
     );
   }
 
+  Widget _buildLoadingState() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(
+        vertical: 32,
+      ),
+      decoration: BoxDecoration(
+        color: AppColors.white,
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(
+          color: AppColors.border,
+        ),
+      ),
+      child: const Center(
+        child: CircularProgressIndicator(
+          color: AppColors.primary,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildProfileContent() {
+    return Column(
+      children: [
+        _buildProfileHeader(),
+        const SizedBox(height: 28),
+        Align(
+          alignment: Alignment.centerLeft,
+          child: _buildSectionLabel(
+            'YOUR SENTRI ACTIVITY',
+          ),
+        ),
+        const SizedBox(height: 10),
+        _buildProfileOption(
+          icon: Icons.assignment_outlined,
+          title: 'My Reports',
+          description: 'View cybercrime reports you have submitted.',
+          onTap: () {
+            _openScreen(
+              const MyReportsScreen(),
+            );
+          },
+        ),
+        const SizedBox(height: 12),
+        _buildProfileOption(
+          icon: Icons.insights_outlined,
+          title: 'Security Activity',
+          description: 'Review your recent scam and phishing checks.',
+          onTap: () {
+            _openScreen(
+              const SecurityActivityScreen(),
+            );
+          },
+        ),
+        const SizedBox(height: 12),
+        _buildProfileOption(
+          icon: Icons.notifications_none_rounded,
+          title: 'Notifications',
+          description: 'View security alerts and activity updates.',
+          showBadge: _unreadNotifications > 0,
+          onTap: () {
+            _openScreen(
+              const NotificationsScreen(),
+            );
+          },
+        ),
+        const SizedBox(height: 28),
+        Align(
+          alignment: Alignment.centerLeft,
+          child: _buildSectionLabel(
+            'LEARNING',
+          ),
+        ),
+        const SizedBox(height: 10),
+        _buildProfileOption(
+          icon: Icons.bookmark_outline_rounded,
+          title: 'Saved Lessons',
+          description: 'Access lessons you save for later.',
+          onTap: () {
+            _openScreen(
+              const SavedLessonsScreen(),
+            );
+          },
+        ),
+        const SizedBox(height: 12),
+        _buildProfileOption(
+          icon: Icons.school_outlined,
+          title: 'Learning Progress',
+          description: 'Track the security topics you have completed.',
+          onTap: () {
+            _openScreen(
+              const LearningProgressScreen(),
+            );
+          },
+        ),
+        const SizedBox(height: 28),
+        Align(
+          alignment: Alignment.centerLeft,
+          child: _buildSectionLabel(
+            'ACCOUNT',
+          ),
+        ),
+        const SizedBox(height: 10),
+        _buildProfileOption(
+          icon: Icons.settings_outlined,
+          title: 'Settings',
+          description: 'Manage your Sentri account and preferences.',
+          onTap: _openSettings,
+        ),
+      ],
+    );
+  }
+
   @override
-  Widget build(
-    BuildContext context,
-  ) {
+  Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
@@ -638,121 +596,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             32,
           ),
           children: [
-            _buildProfileHeader(),
-            const SizedBox(
-              height: 20,
-            ),
-            _buildSecurityOverview(),
-            const SizedBox(
-              height: 28,
-            ),
-            _buildSectionLabel(
-              'YOUR SENTRI ACTIVITY',
-            ),
-            const SizedBox(
-              height: 10,
-            ),
-            _buildProfileOption(
-              icon: Icons.assignment_outlined,
-              title: 'My Reports',
-              description: 'View cybercrime reports you have submitted.',
-              onTap: () {
-                _openScreen(
-                  const MyReportsScreen(),
-                );
-              },
-            ),
-            const SizedBox(
-              height: 12,
-            ),
-            _buildProfileOption(
-              icon: Icons.insights_outlined,
-              title: 'Security Activity',
-              description: 'Review your scam and phishing checks.',
-              onTap: () {
-                _openScreen(
-                  const SecurityActivityScreen(),
-                );
-              },
-            ),
-            const SizedBox(
-              height: 12,
-            ),
-            _buildProfileOption(
-              icon: Icons.notifications_none_rounded,
-              title: 'Notifications',
-              description: 'Review security alerts from Sentri.',
-              showBadge: _unreadNotifications > 0,
-              onTap: () {
-                _openScreen(
-                  const NotificationsScreen(),
-                );
-              },
-            ),
-            const SizedBox(
-              height: 28,
-            ),
-            _buildSectionLabel(
-              'LEARNING',
-            ),
-            const SizedBox(
-              height: 10,
-            ),
-            _buildProfileOption(
-              icon: Icons.bookmark_outline_rounded,
-              title: 'Saved Lessons',
-              description: 'Access lessons you save for later.',
-              onTap: () {
-                _openScreen(
-                  const SavedLessonsScreen(),
-                );
-              },
-            ),
-            const SizedBox(
-              height: 12,
-            ),
-            _buildProfileOption(
-              icon: Icons.school_outlined,
-              title: 'Learning Progress',
-              description: 'Track the security topics you have completed.',
-              onTap: () {
-                _openScreen(
-                  const LearningProgressScreen(),
-                );
-              },
-            ),
-            const SizedBox(
-              height: 28,
-            ),
-            _buildSectionLabel(
-              'ACCOUNT',
-            ),
-            const SizedBox(
-              height: 10,
-            ),
-            _buildProfileOption(
-              icon: Icons.settings_outlined,
-              title: 'Settings',
-              description: 'Manage your Sentri preferences.',
-              onTap: () async {
-                final updatedUser = await Navigator.push<AuthUser>(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => SettingsScreen(
-                      user: _user!,
-                    ),
-                  ),
-                );
-
-                if (!mounted || updatedUser == null) {
-                  return;
-                }
-
-                setState(() {
-                  _user = updatedUser;
-                });
-              },
-            ),
+            if (_isLoading) _buildLoadingState() else _buildProfileContent(),
           ],
         ),
       ),

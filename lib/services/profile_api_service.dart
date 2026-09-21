@@ -122,9 +122,15 @@ class ProfileApiService {
     final response = await http.get(
       Uri.parse(
         '${ApiConfig.baseUrl}/api/auth/me',
+      ).replace(
+        queryParameters: {
+          '_': DateTime.now().millisecondsSinceEpoch.toString(),
+        },
       ),
       headers: {
         'Authorization': 'Bearer $token',
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        'Pragma': 'no-cache',
       },
     );
 

@@ -17,8 +17,13 @@ class _SecurityActivityScreenState extends State<SecurityActivityScreen> {
 
   List<SecurityActivity> _activities = [];
 
+  SecurityActivitySummary? _summary;
+
   bool _isLoading = true;
+
   String? _errorMessage;
+
+  String _selectedFilter = 'All';
 
   @override
   void initState() {
@@ -33,12 +38,16 @@ class _SecurityActivityScreenState extends State<SecurityActivityScreen> {
     });
 
     try {
-      final activities = await _activityService.getActivity();
+      final results = await Future.wait([
+        _activityService.getSummary(),
+        _activityService.getActivity(),
+      ]);
 
       if (!mounted) return;
 
       setState(() {
-        _activities = activities;
+        _summary = results[0] as SecurityActivitySummary;
+        _activities = results[1] as List<SecurityActivity>;
         _isLoading = false;
       });
     } catch (_) {
@@ -51,6 +60,26 @@ class _SecurityActivityScreenState extends State<SecurityActivityScreen> {
     }
   }
 
+  List<SecurityActivity> get _filteredActivities {
+    if (_selectedFilter == 'All') {
+      return _activities;
+    }
+
+    return _activities.where((activity) {
+      return _riskLabel(activity.riskLevel) == _selectedFilter;
+    }).toList();
+  }
+
+  int get _safeCount {
+    final activityCount = _summary?.activityCount ?? 0;
+    final highRiskCount = _summary?.recentHighRiskCount ?? 0;
+    final suspiciousCount = _summary?.recentSuspiciousCount ?? 0;
+
+    final safeCount = activityCount - highRiskCount - suspiciousCount;
+
+    return safeCount < 0 ? 0 : safeCount;
+  }
+
   String _activityTitle(String activityType) {
     switch (activityType.toLowerCase()) {
       case 'scam_check':
@@ -61,6 +90,19 @@ class _SecurityActivityScreenState extends State<SecurityActivityScreen> {
 
       default:
         return 'Security Check';
+    }
+  }
+
+  String _activityDescription(String activityType) {
+    switch (activityType.toLowerCase()) {
+      case 'scam_check':
+        return 'Message or content analyzed for scam indicators.';
+
+      case 'phishing_check':
+        return 'Link analyzed for suspicious or phishing indicators.';
+
+      default:
+        return 'Security check completed in Sentri.';
     }
   }
 
@@ -77,9 +119,29 @@ class _SecurityActivityScreenState extends State<SecurityActivityScreen> {
     }
   }
 
+  String _normalizeRiskLevel(String riskLevel) {
+    final normalized = riskLevel
+        .trim()
+        .toLowerCase()
+        .replaceAll('-', '_')
+        .replaceAll(' ', '_');
+
+    if (normalized == 'highrisk' ||
+        normalized == 'high_risk' ||
+        normalized == 'high.risk') {
+      return 'highRisk';
+    }
+
+    if (normalized == 'suspicious') {
+      return 'suspicious';
+    }
+
+    return 'safe';
+  }
+
   Color _riskColor(String riskLevel) {
-    switch (riskLevel.toLowerCase()) {
-      case 'highrisk':
+    switch (_normalizeRiskLevel(riskLevel)) {
+      case 'highRisk':
         return AppColors.highRisk;
 
       case 'suspicious':
@@ -92,8 +154,8 @@ class _SecurityActivityScreenState extends State<SecurityActivityScreen> {
   }
 
   Color _riskBackground(String riskLevel) {
-    switch (riskLevel.toLowerCase()) {
-      case 'highrisk':
+    switch (_normalizeRiskLevel(riskLevel)) {
+      case 'highRisk':
         return AppColors.highRiskBackground;
 
       case 'suspicious':
@@ -106,8 +168,8 @@ class _SecurityActivityScreenState extends State<SecurityActivityScreen> {
   }
 
   String _riskLabel(String riskLevel) {
-    switch (riskLevel.toLowerCase()) {
-      case 'highrisk':
+    switch (_normalizeRiskLevel(riskLevel)) {
+      case 'highRisk':
         return 'High Risk';
 
       case 'suspicious':
@@ -116,6 +178,72 @@ class _SecurityActivityScreenState extends State<SecurityActivityScreen> {
       case 'safe':
       default:
         return 'Safe';
+    }
+  }
+
+  String _statusTitle(String status) {
+    final normalized = status.trim().toLowerCase();
+
+    switch (normalized) {
+      case 'stay alert':
+        return 'Stay Alert';
+
+      case 'be cautious':
+        return 'Be Cautious';
+
+      case 'no recent flags':
+        return 'No Recent Flags';
+
+      default:
+        return status;
+    }
+  }
+
+  Color _statusColor(String status) {
+    final normalized = status.trim().toLowerCase();
+
+    switch (normalized) {
+      case 'stay alert':
+        return AppColors.highRisk;
+
+      case 'be cautious':
+        return AppColors.suspicious;
+
+      case 'no recent flags':
+      default:
+        return AppColors.safe;
+    }
+  }
+
+  Color _statusBackground(String status) {
+    final normalized = status.trim().toLowerCase();
+
+    switch (normalized) {
+      case 'stay alert':
+        return AppColors.highRiskBackground;
+
+      case 'be cautious':
+        return AppColors.suspiciousBackground;
+
+      case 'no recent flags':
+      default:
+        return AppColors.safeBackground;
+    }
+  }
+
+  IconData _statusIcon(String status) {
+    final normalized = status.trim().toLowerCase();
+
+    switch (normalized) {
+      case 'stay alert':
+        return Icons.warning_amber_rounded;
+
+      case 'be cautious':
+        return Icons.visibility_outlined;
+
+      case 'no recent flags':
+      default:
+        return Icons.verified_user_outlined;
     }
   }
 
@@ -143,48 +271,74 @@ class _SecurityActivityScreenState extends State<SecurityActivityScreen> {
     return '$hour:$minute $period';
   }
 
-  Widget _buildIntroCard() {
+  Widget _buildStatusCard() {
+    final summary = _summary;
+
+    if (summary == null) {
+      return const SizedBox.shrink();
+    }
+
+    final statusColor = _statusColor(
+      summary.status,
+    );
+
+    final statusBackground = _statusBackground(
+      summary.status,
+    );
+
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: AppColors.primaryLight,
-        borderRadius: BorderRadius.circular(20),
+        color: statusBackground,
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(
+          color: statusColor.withOpacity(0.15),
+        ),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Container(
-            width: 44,
-            height: 44,
+            width: 46,
+            height: 46,
             decoration: BoxDecoration(
               color: AppColors.white,
-              borderRadius: BorderRadius.circular(14),
+              borderRadius: BorderRadius.circular(15),
             ),
-            child: const Icon(
-              Icons.insights_outlined,
-              color: AppColors.primary,
-              size: 23,
+            child: Icon(
+              _statusIcon(summary.status),
+              color: statusColor,
+              size: 24,
             ),
           ),
-          const SizedBox(width: 12),
-          const Expanded(
+          const SizedBox(width: 13),
+          Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Your Security Activity',
+                  'Recent security status',
                   style: TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w800,
-                    color: AppColors.textDark,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                    color: statusColor,
                   ),
                 ),
-                SizedBox(height: 5),
+                const SizedBox(height: 4),
                 Text(
-                  'See the scam and phishing checks that contribute to your Sentri security status.',
+                  _statusTitle(summary.status),
                   style: TextStyle(
-                    fontSize: 13,
-                    height: 1.5,
+                    fontSize: 17,
+                    fontWeight: FontWeight.w800,
+                    color: statusColor,
+                  ),
+                ),
+                const SizedBox(height: 5),
+                Text(
+                  summary.message,
+                  style: const TextStyle(
+                    fontSize: 12.5,
+                    height: 1.4,
                     color: AppColors.textSecondary,
                   ),
                 ),
@@ -192,6 +346,152 @@ class _SecurityActivityScreenState extends State<SecurityActivityScreen> {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildStatCard({
+    required String value,
+    required String label,
+    required Color color,
+    required Color backgroundColor,
+  }) {
+    return Expanded(
+      child: Container(
+        padding: const EdgeInsets.symmetric(
+          horizontal: 12,
+          vertical: 15,
+        ),
+        decoration: BoxDecoration(
+          color: AppColors.white,
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(
+            color: AppColors.border,
+          ),
+        ),
+        child: Column(
+          children: [
+            Container(
+              width: 36,
+              height: 36,
+              decoration: BoxDecoration(
+                color: backgroundColor,
+                shape: BoxShape.circle,
+              ),
+              alignment: Alignment.center,
+              child: Text(
+                value,
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w800,
+                  color: color,
+                ),
+              ),
+            ),
+            const SizedBox(height: 9),
+            Text(
+              label,
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                fontSize: 11.5,
+                fontWeight: FontWeight.w600,
+                color: AppColors.textSecondary,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSummary() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildStatusCard(),
+        const SizedBox(height: 12),
+        Row(
+          children: [
+            _buildStatCard(
+              value: '${_summary?.activityCount ?? 0}',
+              label: 'Total checks',
+              color: AppColors.primary,
+              backgroundColor: AppColors.primaryLight,
+            ),
+            const SizedBox(width: 10),
+            _buildStatCard(
+              value: '${_summary?.recentHighRiskCount ?? 0}',
+              label: 'High risk',
+              color: AppColors.highRisk,
+              backgroundColor: AppColors.highRiskBackground,
+            ),
+            const SizedBox(width: 10),
+            _buildStatCard(
+              value: '${_summary?.recentSuspiciousCount ?? 0}',
+              label: 'Suspicious',
+              color: AppColors.suspicious,
+              backgroundColor: AppColors.suspiciousBackground,
+            ),
+            const SizedBox(width: 10),
+            _buildStatCard(
+              value: '$_safeCount',
+              label: 'Clear',
+              color: AppColors.safe,
+              backgroundColor: AppColors.safeBackground,
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildFilterChip(String label) {
+    final isSelected = _selectedFilter == label;
+
+    Color color;
+
+    switch (label) {
+      case 'High Risk':
+        color = AppColors.highRisk;
+        break;
+
+      case 'Suspicious':
+        color = AppColors.suspicious;
+        break;
+
+      case 'Safe':
+        color = AppColors.safe;
+        break;
+
+      case 'All':
+      default:
+        color = AppColors.primary;
+    }
+
+    return ChoiceChip(
+      label: Text(label),
+      selected: isSelected,
+      onSelected: (_) {
+        setState(() {
+          _selectedFilter = label;
+        });
+      },
+      selectedColor: color.withOpacity(0.12),
+      backgroundColor: AppColors.white,
+      side: BorderSide(
+        color: isSelected ? color.withOpacity(0.35) : AppColors.border,
+      ),
+      labelStyle: TextStyle(
+        fontSize: 12,
+        fontWeight: FontWeight.w700,
+        color: isSelected ? color : AppColors.textSecondary,
+      ),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(14),
+      ),
+      showCheckmark: false,
+      padding: const EdgeInsets.symmetric(
+        horizontal: 4,
       ),
     );
   }
@@ -203,6 +503,8 @@ class _SecurityActivityScreenState extends State<SecurityActivityScreen> {
 
     final riskBackground = _riskBackground(activity.riskLevel);
 
+    final riskScore = activity.riskScore.clamp(0, 100).toDouble();
+
     return Container(
       padding: const EdgeInsets.all(17),
       decoration: BoxDecoration(
@@ -212,112 +514,150 @@ class _SecurityActivityScreenState extends State<SecurityActivityScreen> {
           color: AppColors.border,
         ),
       ),
-      child: Row(
+      child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
-            width: 46,
-            height: 46,
-            decoration: BoxDecoration(
-              color: riskBackground,
-              borderRadius: BorderRadius.circular(15),
-            ),
-            child: Icon(
-              _activityIcon(
-                activity.activityType,
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: 46,
+                height: 46,
+                decoration: BoxDecoration(
+                  color: riskBackground,
+                  borderRadius: BorderRadius.circular(15),
+                ),
+                child: Icon(
+                  _activityIcon(
+                    activity.activityType,
+                  ),
+                  color: riskColor,
+                  size: 23,
+                ),
               ),
-              color: riskColor,
-              size: 23,
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Expanded(
-                      child: Text(
-                        _activityTitle(
-                          activity.activityType,
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(
+                          child: Text(
+                            _activityTitle(
+                              activity.activityType,
+                            ),
+                            style: const TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w800,
+                              color: AppColors.textDark,
+                            ),
+                          ),
                         ),
-                        style: const TextStyle(
-                          fontSize: 15,
-                          fontWeight: FontWeight.w800,
-                          color: AppColors.textDark,
+                        const SizedBox(width: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 9,
+                            vertical: 6,
+                          ),
+                          decoration: BoxDecoration(
+                            color: riskBackground,
+                            borderRadius: BorderRadius.circular(
+                              20,
+                            ),
+                          ),
+                          child: Text(
+                            _riskLabel(
+                              activity.riskLevel,
+                            ),
+                            style: TextStyle(
+                              fontSize: 10.5,
+                              fontWeight: FontWeight.w700,
+                              color: riskColor,
+                            ),
+                          ),
                         ),
-                      ),
+                      ],
                     ),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 9,
-                        vertical: 6,
+                    const SizedBox(height: 5),
+                    Text(
+                      _activityDescription(
+                        activity.activityType,
                       ),
-                      decoration: BoxDecoration(
-                        color: riskBackground,
-                        borderRadius: BorderRadius.circular(
-                          20,
-                        ),
-                      ),
-                      child: Text(
-                        _riskLabel(
-                          activity.riskLevel,
-                        ),
-                        style: TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w700,
-                          color: riskColor,
-                        ),
+                      style: const TextStyle(
+                        fontSize: 12,
+                        height: 1.4,
+                        color: AppColors.textSecondary,
                       ),
                     ),
                   ],
                 ),
-                const SizedBox(height: 7),
+              ),
+            ],
+          ),
+          const SizedBox(height: 15),
+          Container(
+            padding: const EdgeInsets.symmetric(
+              horizontal: 12,
+              vertical: 10,
+            ),
+            decoration: BoxDecoration(
+              color: AppColors.background,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Row(
+              children: [
+                const Icon(
+                  Icons.schedule_rounded,
+                  size: 16,
+                  color: AppColors.textSecondary,
+                ),
+                const SizedBox(width: 7),
                 Text(
                   '${_formatDate(activity.createdAt)} • '
                   '${_formatTime(activity.createdAt)}',
                   style: const TextStyle(
-                    fontSize: 12,
+                    fontSize: 11.5,
+                    fontWeight: FontWeight.w600,
                     color: AppColors.textSecondary,
                   ),
                 ),
-                const SizedBox(height: 10),
-                Row(
-                  children: [
-                    const Text(
-                      'Risk score',
-                      style: TextStyle(
-                        fontSize: 12.5,
-                        fontWeight: FontWeight.w600,
-                        color: AppColors.textSecondary,
-                      ),
-                    ),
-                    const Spacer(),
-                    Text(
-                      '${activity.riskScore}',
-                      style: TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w800,
-                        color: riskColor,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 7),
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(8),
-                  child: LinearProgressIndicator(
-                    value: (activity.riskScore / 100).clamp(0.0, 1.0),
-                    minHeight: 6,
-                    backgroundColor: AppColors.background,
-                    valueColor: AlwaysStoppedAnimation<Color>(
-                      riskColor,
-                    ),
-                  ),
-                ),
               ],
+            ),
+          ),
+          const SizedBox(height: 13),
+          Row(
+            children: [
+              const Text(
+                'Risk score',
+                style: TextStyle(
+                  fontSize: 12.5,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.textSecondary,
+                ),
+              ),
+              const Spacer(),
+              Text(
+                '${activity.riskScore}/100',
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w800,
+                  color: riskColor,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 7),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(8),
+            child: LinearProgressIndicator(
+              value: riskScore / 100,
+              minHeight: 7,
+              backgroundColor: AppColors.background,
+              valueColor: AlwaysStoppedAnimation<Color>(
+                riskColor,
+              ),
             ),
           ),
         ],
@@ -326,6 +666,8 @@ class _SecurityActivityScreenState extends State<SecurityActivityScreen> {
   }
 
   Widget _buildEmptyState() {
+    final hasFilter = _selectedFilter != 'All';
+
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.symmetric(
@@ -345,30 +687,35 @@ class _SecurityActivityScreenState extends State<SecurityActivityScreen> {
             width: 58,
             height: 58,
             decoration: BoxDecoration(
-              color: AppColors.safeBackground,
+              color:
+                  hasFilter ? AppColors.primaryLight : AppColors.safeBackground,
               borderRadius: BorderRadius.circular(18),
             ),
-            child: const Icon(
-              Icons.shield_outlined,
-              color: AppColors.safe,
+            child: Icon(
+              hasFilter ? Icons.filter_alt_off_rounded : Icons.shield_outlined,
+              color: hasFilter ? AppColors.primary : AppColors.safe,
               size: 30,
             ),
           ),
           const SizedBox(height: 15),
-          const Text(
-            'No security activity yet',
+          Text(
+            hasFilter
+                ? 'No $_selectedFilter checks'
+                : 'No security activity yet',
             textAlign: TextAlign.center,
-            style: TextStyle(
+            style: const TextStyle(
               fontSize: 17,
               fontWeight: FontWeight.w800,
               color: AppColors.textDark,
             ),
           ),
           const SizedBox(height: 7),
-          const Text(
-            'Run a scam or phishing check and your activity will appear here.',
+          Text(
+            hasFilter
+                ? 'Try another filter to see more activity.'
+                : 'Run a scam or phishing check and your activity will appear here.',
             textAlign: TextAlign.center,
-            style: TextStyle(
+            style: const TextStyle(
               fontSize: 13,
               height: 1.5,
               color: AppColors.textSecondary,
@@ -379,17 +726,72 @@ class _SecurityActivityScreenState extends State<SecurityActivityScreen> {
     );
   }
 
-  Widget _buildBody() {
-    if (_isLoading) {
-      return const Center(
-        child: CircularProgressIndicator(
-          color: AppColors.primary,
-        ),
-      );
-    }
+  Widget _buildContent() {
+    final activities = _filteredActivities;
 
-    if (_errorMessage != null) {
-      return ListView(
+    return RefreshIndicator(
+      color: AppColors.primary,
+      onRefresh: _loadActivity,
+      child: ListView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.fromLTRB(
+          20,
+          12,
+          20,
+          32,
+        ),
+        children: [
+          _buildSummary(),
+          const SizedBox(height: 26),
+          const Text(
+            'ACTIVITY HISTORY',
+            style: TextStyle(
+              fontSize: 12.5,
+              fontWeight: FontWeight.w800,
+              color: AppColors.textSecondary,
+              letterSpacing: 0.5,
+            ),
+          ),
+          const SizedBox(height: 10),
+          SizedBox(
+            height: 42,
+            child: ListView(
+              scrollDirection: Axis.horizontal,
+              children: [
+                _buildFilterChip('All'),
+                const SizedBox(width: 8),
+                _buildFilterChip('High Risk'),
+                const SizedBox(width: 8),
+                _buildFilterChip('Suspicious'),
+                const SizedBox(width: 8),
+                _buildFilterChip('Safe'),
+              ],
+            ),
+          ),
+          const SizedBox(height: 14),
+          if (activities.isEmpty)
+            _buildEmptyState()
+          else
+            ...activities.map(
+              (activity) => Padding(
+                padding: const EdgeInsets.only(
+                  bottom: 12,
+                ),
+                child: _buildActivityCard(
+                  activity,
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildErrorState() {
+    return RefreshIndicator(
+      color: AppColors.primary,
+      onRefresh: _loadActivity,
+      child: ListView(
         physics: const AlwaysScrollableScrollPhysics(),
         padding: const EdgeInsets.all(20),
         children: [
@@ -421,67 +823,12 @@ class _SecurityActivityScreenState extends State<SecurityActivityScreen> {
           Center(
             child: ElevatedButton(
               onPressed: _loadActivity,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.primary,
-                foregroundColor: AppColors.white,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(
-                    14,
-                  ),
-                ),
+              child: const Text(
+                'Try Again',
               ),
-              child: const Text('Try Again'),
             ),
           ),
         ],
-      );
-    }
-
-    if (_activities.isEmpty) {
-      return RefreshIndicator(
-        color: AppColors.primary,
-        onRefresh: _loadActivity,
-        child: ListView(
-          physics: const AlwaysScrollableScrollPhysics(),
-          padding: const EdgeInsets.fromLTRB(
-            20,
-            12,
-            20,
-            30,
-          ),
-          children: [
-            _buildIntroCard(),
-            const SizedBox(height: 24),
-            _buildEmptyState(),
-          ],
-        ),
-      );
-    }
-
-    return RefreshIndicator(
-      color: AppColors.primary,
-      onRefresh: _loadActivity,
-      child: ListView.separated(
-        physics: const AlwaysScrollableScrollPhysics(),
-        padding: const EdgeInsets.fromLTRB(
-          20,
-          12,
-          20,
-          30,
-        ),
-        itemCount: _activities.length + 1,
-        separatorBuilder: (_, __) => const SizedBox(height: 12),
-        itemBuilder: (context, index) {
-          if (index == 0) {
-            return _buildIntroCard();
-          }
-
-          final activity = _activities[index - 1];
-
-          return _buildActivityCard(
-            activity,
-          );
-        },
       ),
     );
   }
@@ -504,7 +851,15 @@ class _SecurityActivityScreenState extends State<SecurityActivityScreen> {
         scrolledUnderElevation: 0,
       ),
       body: SafeArea(
-        child: _buildBody(),
+        child: _isLoading
+            ? const Center(
+                child: CircularProgressIndicator(
+                  color: AppColors.primary,
+                ),
+              )
+            : _errorMessage != null
+                ? _buildErrorState()
+                : _buildContent(),
       ),
     );
   }

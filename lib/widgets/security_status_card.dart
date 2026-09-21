@@ -54,6 +54,12 @@ class SecurityStatusCard extends StatelessWidget {
     return '$activityCount security checks recorded in the last 30 days.';
   }
 
+  int get _clearCount {
+    final clear = activityCount - recentSuspiciousCount - recentHighRiskCount;
+
+    return clear < 0 ? 0 : clear;
+  }
+
   Widget _buildStat({
     required String value,
     required String label,
@@ -124,7 +130,7 @@ class SecurityStatusCard extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     const Text(
-                      'Security Status',
+                      'Recent Security Status',
                       style: TextStyle(
                         fontSize: 13,
                         fontWeight: FontWeight.w700,
@@ -194,8 +200,9 @@ class SecurityStatusCard extends StatelessWidget {
                 ),
                 const SizedBox(width: 14),
                 _buildStat(
-                  value: '7d',
-                  label: 'Status window',
+                  value: '$_clearCount',
+                  label: 'Clear',
+                  color: _clearCount > 0 ? AppColors.safe : AppColors.textDark,
                 ),
               ],
             ),

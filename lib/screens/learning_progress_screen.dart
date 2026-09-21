@@ -20,6 +20,7 @@ class _LearningProgressScreenState extends State<LearningProgressScreen> {
   final LearningProgressService _progressService = LearningProgressService();
 
   Set<String> _completedLessons = {};
+
   bool _isLoading = true;
 
   @override
@@ -60,7 +61,7 @@ class _LearningProgressScreenState extends State<LearningProgressScreen> {
   Widget build(BuildContext context) {
     final total = SecurityLessons.all.length;
 
-    final completed = SecurityLessons.all
+    final completedLessons = SecurityLessons.all
         .where(
           (lesson) => _completedLessons.contains(
             lesson.title,
@@ -68,7 +69,15 @@ class _LearningProgressScreenState extends State<LearningProgressScreen> {
         )
         .toList();
 
-    final progress = total == 0 ? 0.0 : completed.length / total;
+    final incompleteLessons = SecurityLessons.all
+        .where(
+          (lesson) => !_completedLessons.contains(
+            lesson.title,
+          ),
+        )
+        .toList();
+
+    final progress = total == 0 ? 0.0 : completedLessons.length / total;
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -105,31 +114,73 @@ class _LearningProgressScreenState extends State<LearningProgressScreen> {
                 children: [
                   _buildProgressHeader(
                     total,
-                    completed.length,
+                    completedLessons.length,
                     progress,
                   ),
-                  const SizedBox(height: 24),
-                  if (completed.isEmpty)
-                    _buildEmptyState()
-                  else ...[
+                  const SizedBox(
+                    height: 24,
+                  ),
+                  _buildCategoryProgress(),
+                  if (incompleteLessons.isNotEmpty) ...[
+                    const SizedBox(
+                      height: 28,
+                    ),
                     const Text(
-                      'Completed Lessons',
+                      'KEEP LEARNING',
                       style: TextStyle(
-                        fontSize: 19,
+                        fontSize: 12.5,
                         fontWeight: FontWeight.w800,
-                        color: AppColors.textDark,
+                        color: AppColors.textSecondary,
+                        letterSpacing: 0.5,
                       ),
                     ),
                     const SizedBox(
-                      height: 12,
+                      height: 10,
                     ),
-                    ...completed.map(
+                    SecurityTopicCard(
+                      icon: incompleteLessons.first.icon,
+                      title: incompleteLessons.first.title,
+                      description:
+                          'Continue your learning journey with this lesson.',
+                      category: incompleteLessons.first.categoryTitle,
+                      estimatedMinutes:
+                          incompleteLessons.first.estimatedMinutes,
+                      onTap: () => _openLesson(
+                        incompleteLessons.first,
+                      ),
+                    ),
+                  ],
+                  if (completedLessons.isNotEmpty) ...[
+                    const SizedBox(
+                      height: 28,
+                    ),
+                    const Text(
+                      'COMPLETED LESSONS',
+                      style: TextStyle(
+                        fontSize: 12.5,
+                        fontWeight: FontWeight.w800,
+                        color: AppColors.textSecondary,
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+                    const SizedBox(
+                      height: 10,
+                    ),
+                    ...completedLessons.map(
                       (lesson) => Padding(
                         padding: const EdgeInsets.only(
                           bottom: 12,
                         ),
-                        child: _buildCompletedLesson(
-                          lesson,
+                        child: SecurityTopicCard(
+                          icon: lesson.icon,
+                          title: lesson.title,
+                          description: lesson.description,
+                          category: lesson.categoryTitle,
+                          estimatedMinutes: lesson.estimatedMinutes,
+                          isCompleted: true,
+                          onTap: () => _openLesson(
+                            lesson,
+                          ),
                         ),
                       ),
                     ),
@@ -145,6 +196,18 @@ class _LearningProgressScreenState extends State<LearningProgressScreen> {
     int completed,
     double progress,
   ) {
+    String message;
+
+    if (completed == 0) {
+      message = 'Start your learning journey by completing your first lesson.';
+    } else if (completed == total) {
+      message = 'You have completed every lesson in the current library.';
+    } else if (progress < 0.5) {
+      message = 'Good start. Keep building your digital safety knowledge.';
+    } else {
+      message = 'You are making strong progress. Keep going.';
+    }
+
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -180,39 +243,26 @@ class _LearningProgressScreenState extends State<LearningProgressScreen> {
                 width: 12,
               ),
               const Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Your Learning Journey',
-                      style: TextStyle(
-                        fontSize: 17,
-                        fontWeight: FontWeight.w800,
-                        color: AppColors.textDark,
-                      ),
-                    ),
-                    SizedBox(height: 4),
-                    Text(
-                      'Keep building your digital safety knowledge.',
-                      style: TextStyle(
-                        fontSize: 13,
-                        color: AppColors.textSecondary,
-                      ),
-                    ),
-                  ],
+                child: Text(
+                  'Your Learning Journey',
+                  style: TextStyle(
+                    fontSize: 17,
+                    fontWeight: FontWeight.w800,
+                    color: AppColors.textDark,
+                  ),
                 ),
               ),
             ],
           ),
           const SizedBox(
-            height: 20,
+            height: 18,
           ),
           Row(
             children: [
               Text(
                 '$completed of $total lessons completed',
                 style: const TextStyle(
-                  fontSize: 13,
+                  fontSize: 13.5,
                   fontWeight: FontWeight.w700,
                   color: AppColors.textDark,
                 ),
@@ -221,14 +271,16 @@ class _LearningProgressScreenState extends State<LearningProgressScreen> {
               Text(
                 '${(progress * 100).round()}%',
                 style: const TextStyle(
-                  fontSize: 14,
+                  fontSize: 15,
                   fontWeight: FontWeight.w800,
                   color: AppColors.primary,
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 10),
+          const SizedBox(
+            height: 10,
+          ),
           ClipRRect(
             borderRadius: BorderRadius.circular(
               10,
@@ -242,82 +294,150 @@ class _LearningProgressScreenState extends State<LearningProgressScreen> {
               ),
             ),
           ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildCompletedLesson(
-    SecurityLesson lesson,
-  ) {
-    return Stack(
-      children: [
-        SecurityTopicCard(
-          icon: lesson.icon,
-          title: lesson.title,
-          description: lesson.description,
-          onTap: () => _openLesson(lesson),
-        ),
-        Positioned(
-          top: 12,
-          right: 12,
-          child: Container(
-            width: 30,
-            height: 30,
-            decoration: const BoxDecoration(
-              color: AppColors.safeBackground,
-              shape: BoxShape.circle,
-            ),
-            child: const Icon(
-              Icons.check_rounded,
-              size: 18,
-              color: AppColors.safe,
-            ),
+          const SizedBox(
+            height: 12,
           ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildEmptyState() {
-    return Container(
-      padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        color: AppColors.white,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(
-          color: AppColors.border,
-        ),
-      ),
-      child: const Column(
-        children: [
-          Icon(
-            Icons.school_outlined,
-            size: 44,
-            color: AppColors.primary,
-          ),
-          SizedBox(height: 14),
           Text(
-            'No completed lessons yet',
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              fontSize: 17,
-              fontWeight: FontWeight.w800,
-              color: AppColors.textDark,
-            ),
-          ),
-          SizedBox(height: 7),
-          Text(
-            'Complete a lesson and your progress will appear here.',
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              fontSize: 13,
-              height: 1.5,
+            message,
+            style: const TextStyle(
+              fontSize: 12.5,
+              height: 1.45,
               color: AppColors.textSecondary,
             ),
           ),
         ],
       ),
     );
+  }
+
+  Widget _buildCategoryProgress() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'PROGRESS BY TOPIC',
+          style: TextStyle(
+            fontSize: 12.5,
+            fontWeight: FontWeight.w800,
+            color: AppColors.textSecondary,
+            letterSpacing: 0.5,
+          ),
+        ),
+        const SizedBox(
+          height: 10,
+        ),
+        ...SecurityLessonCategory.values.map(
+          (category) {
+            final lessons = SecurityLessons.all
+                .where(
+                  (lesson) => lesson.category == category,
+                )
+                .toList();
+
+            final completed = lessons
+                .where(
+                  (lesson) => _completedLessons.contains(
+                    lesson.title,
+                  ),
+                )
+                .length;
+
+            final progress = lessons.isEmpty ? 0.0 : completed / lessons.length;
+
+            return Padding(
+              padding: const EdgeInsets.only(
+                bottom: 10,
+              ),
+              child: _buildCategoryCard(
+                category,
+                completed,
+                lessons.length,
+                progress,
+              ),
+            );
+          },
+        ),
+      ],
+    );
+  }
+
+  Widget _buildCategoryCard(
+    SecurityLessonCategory category,
+    int completed,
+    int total,
+    double progress,
+  ) {
+    return Container(
+      padding: const EdgeInsets.all(15),
+      decoration: BoxDecoration(
+        color: AppColors.white,
+        borderRadius: BorderRadius.circular(
+          18,
+        ),
+        border: Border.all(
+          color: AppColors.border,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  _categoryTitle(
+                    category,
+                  ),
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.textDark,
+                  ),
+                ),
+              ),
+              Text(
+                '$completed/$total',
+                style: const TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w800,
+                  color: AppColors.primary,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(
+            height: 9,
+          ),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(
+              8,
+            ),
+            child: LinearProgressIndicator(
+              value: progress,
+              minHeight: 7,
+              backgroundColor: AppColors.primaryLight,
+              valueColor: const AlwaysStoppedAnimation<Color>(
+                AppColors.primary,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _categoryTitle(
+    SecurityLessonCategory category,
+  ) {
+    switch (category) {
+      case SecurityLessonCategory.scamsAndFraud:
+        return 'Scams & Fraud';
+
+      case SecurityLessonCategory.accountAndDeviceSafety:
+        return 'Account & Device Safety';
+
+      case SecurityLessonCategory.onlineAwareness:
+        return 'Online Awareness';
+    }
   }
 }

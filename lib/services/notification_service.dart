@@ -25,16 +25,31 @@ class AppNotification {
   factory AppNotification.fromJson(
     Map<String, dynamic> json,
   ) {
+    final rawCreatedAt = json['created_at'] as String;
+
     return AppNotification(
       id: json['id'] as int,
       title: json['title'] as String,
       message: json['message'] as String,
       notificationType: json['notification_type'] as String,
       isRead: json['is_read'] as bool,
-      createdAt: DateTime.parse(
-        json['created_at'] as String,
+      createdAt: _parseUtcDateTime(
+        rawCreatedAt,
       ),
     );
+  }
+
+  static DateTime _parseUtcDateTime(
+    String value,
+  ) {
+    final hasTimezone =
+        value.endsWith('Z') || RegExp(r'[+-]\d{2}:\d{2}$').hasMatch(value);
+
+    if (hasTimezone) {
+      return DateTime.parse(value).toLocal();
+    }
+
+    return DateTime.parse('${value}Z').toLocal();
   }
 }
 
@@ -55,7 +70,9 @@ class NotificationService {
     return token;
   }
 
-  Map<String, String> _headers(String token) {
+  Map<String, String> _headers(
+    String token,
+  ) {
     return {
       'Authorization': 'Bearer $token',
       'Content-Type': 'application/json',

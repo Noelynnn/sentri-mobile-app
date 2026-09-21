@@ -41,7 +41,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   final ProfileApiService _profileService = ProfileApiService();
 
-  List<Report> _recentReports = [];
+  Report? _latestReport;
 
   bool _reportsLoading = true;
 
@@ -74,18 +74,24 @@ class _HomeScreenState extends State<HomeScreen> {
       return null;
     }
 
+    String url;
+
     if (_profileImagePath!.startsWith('http://') ||
         _profileImagePath!.startsWith('https://')) {
-      return _profileImagePath;
+      url = _profileImagePath!;
+    } else {
+      url = '${ApiConfig.baseUrl}/'
+          '${_profileImagePath!.replaceFirst('/', '')}';
     }
 
-    return '${ApiConfig.baseUrl}/'
-        '${_profileImagePath!.replaceFirst('/', '')}';
+    final separator = url.contains('?') ? '&' : '?';
+
+    return '$url${separator}_v=${DateTime.now().millisecondsSinceEpoch}';
   }
 
   Future<void> _loadHomeData() async {
     await Future.wait([
-      _loadRecentReports(),
+      _loadLatestReport(),
       _loadSecuritySummary(),
       _loadUnreadNotifications(),
     ]);
@@ -93,21 +99,21 @@ class _HomeScreenState extends State<HomeScreen> {
     _loadProfileImage();
   }
 
-  Future<void> _loadRecentReports() async {
+  Future<void> _loadLatestReport() async {
     try {
       final reports = await _reportApiService.getReports();
 
       if (!mounted) return;
 
       setState(() {
-        _recentReports = reports.take(3).toList();
+        _latestReport = reports.isNotEmpty ? reports.first : null;
         _reportsLoading = false;
       });
     } catch (_) {
       if (!mounted) return;
 
       setState(() {
-        _recentReports = [];
+        _latestReport = null;
         _reportsLoading = false;
       });
     }
@@ -209,17 +215,17 @@ class _HomeScreenState extends State<HomeScreen> {
     return _cyberTips[day % _cyberTips.length];
   }
 
-  void _openScreen(Widget screen) {
-    Navigator.push(
+  Future<void> _openScreen(Widget screen) async {
+    await Navigator.push(
       context,
       MaterialPageRoute(
         builder: (_) => screen,
       ),
-    ).then((_) {
-      if (!mounted) return;
+    );
 
-      _loadHomeData();
-    });
+    if (!mounted) return;
+
+    await _loadHomeData();
   }
 
   Widget _buildHomeAvatar() {
@@ -238,9 +244,10 @@ class _HomeScreenState extends State<HomeScreen> {
 
     return ClipOval(
       child: Image.network(
+        key: ValueKey(imageUrl),
         imageUrl,
-        width: 44,
-        height: 44,
+        width: 42,
+        height: 42,
         fit: BoxFit.cover,
         loadingBuilder: (
           context,
@@ -255,17 +262,21 @@ class _HomeScreenState extends State<HomeScreen> {
             _firstLetter,
             style: const TextStyle(
               color: AppColors.white,
-              fontWeight: FontWeight.w800,
+              fontWeight: FontWeight.w700,
               fontSize: 16,
             ),
           );
         },
-        errorBuilder: (context, error, stackTrace) {
+        errorBuilder: (
+          context,
+          error,
+          stackTrace,
+        ) {
           return Text(
             _firstLetter,
             style: const TextStyle(
               color: AppColors.white,
-              fontWeight: FontWeight.w800,
+              fontWeight: FontWeight.w700,
               fontSize: 16,
             ),
           );
@@ -349,9 +360,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           : EdgeInsets.zero,
                       decoration: BoxDecoration(
                         color: AppColors.highRisk,
-                        borderRadius: BorderRadius.circular(
-                          20,
-                        ),
+                        borderRadius: BorderRadius.circular(20),
                         border: Border.all(
                           color: AppColors.white,
                           width: 1.5,
@@ -407,7 +416,7 @@ class _HomeScreenState extends State<HomeScreen> {
     if (_securityLoading) {
       return Container(
         width: double.infinity,
-        height: 220,
+        padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
           color: AppColors.white,
           borderRadius: BorderRadius.circular(24),
@@ -415,9 +424,12 @@ class _HomeScreenState extends State<HomeScreen> {
             color: AppColors.border,
           ),
         ),
-        child: const Center(
-          child: CircularProgressIndicator(
-            color: AppColors.primary,
+        child: const SizedBox(
+          height: 180,
+          child: Center(
+            child: CircularProgressIndicator(
+              color: AppColors.primary,
+            ),
           ),
         ),
       );
@@ -513,9 +525,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 height: 52,
                 decoration: BoxDecoration(
                   color: AppColors.white.withOpacity(0.14),
-                  borderRadius: BorderRadius.circular(
-                    17,
-                  ),
+                  borderRadius: BorderRadius.circular(17),
                 ),
                 child: const Icon(
                   Icons.radar_rounded,
@@ -610,77 +620,172 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget _buildSafetyReminder() {
     return Material(
       color: AppColors.primaryLight,
-      borderRadius: BorderRadius.circular(20),
+      borderRadius: BorderRadius.circular(22),
       child: InkWell(
         onTap: () {
           _openScreen(
             const LearnSecurityScreen(),
           );
         },
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(22),
         child: Container(
+          width: double.infinity,
           padding: const EdgeInsets.all(18),
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(20),
+            borderRadius: BorderRadius.circular(22),
             border: Border.all(
               color: AppColors.primary.withOpacity(0.14),
             ),
           ),
-          child: Row(
+          child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Container(
-                width: 44,
-                height: 44,
-                decoration: BoxDecoration(
-                  color: AppColors.white,
-                  borderRadius: BorderRadius.circular(
-                    14,
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    width: 44,
+                    height: 44,
+                    decoration: BoxDecoration(
+                      color: AppColors.white,
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    child: const Icon(
+                      Icons.shield_outlined,
+                      color: AppColors.primary,
+                      size: 24,
+                    ),
                   ),
-                ),
-                child: const Icon(
-                  Icons.shield_outlined,
-                  color: AppColors.primary,
-                  size: 24,
-                ),
+                  const SizedBox(width: 12),
+                  const Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Safety Reminder',
+                          style: TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w800,
+                            color: AppColors.textDark,
+                          ),
+                        ),
+                        SizedBox(height: 4),
+                        Text(
+                          'Pause before you click, pay, or share.',
+                          style: TextStyle(
+                            fontSize: 14,
+                            height: 1.4,
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.primary,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
               ),
-              const SizedBox(width: 12),
-              const Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Safety Reminder',
-                      style: TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w800,
-                        color: AppColors.textDark,
-                      ),
+              const SizedBox(height: 16),
+              Row(
+                children: [
+                  Expanded(
+                    child: _buildSafetyStep(
+                      number: '1',
+                      title: 'STOP',
+                      description: 'Don\'t react to pressure.',
                     ),
-                    SizedBox(height: 5),
-                    Text(
-                      'Never share your OTP, PIN, or password, even when someone claims to represent a trusted company.',
-                      style: TextStyle(
-                        fontSize: 13,
-                        height: 1.5,
-                        color: AppColors.textSecondary,
-                      ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: _buildSafetyStep(
+                      number: '2',
+                      title: 'VERIFY',
+                      description: 'Check before trusting.',
                     ),
-                    SizedBox(height: 9),
-                    Text(
-                      'Learn more →',
-                      style: TextStyle(
-                        fontSize: 12.5,
-                        fontWeight: FontWeight.w700,
-                        color: AppColors.primary,
-                      ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: _buildSafetyStep(
+                      number: '3',
+                      title: 'PROTECT',
+                      description: 'Keep sensitive details safe.',
                     ),
-                  ],
+                  ),
+                ],
+              ),
+              const SizedBox(height: 13),
+              const Align(
+                alignment: Alignment.centerRight,
+                child: Text(
+                  'Learn more →',
+                  style: TextStyle(
+                    fontSize: 12.5,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.primary,
+                  ),
                 ),
               ),
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildSafetyStep({
+    required String number,
+    required String title,
+    required String description,
+  }) {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(
+        10,
+        11,
+        10,
+        11,
+      ),
+      decoration: BoxDecoration(
+        color: AppColors.white.withOpacity(0.72),
+        borderRadius: BorderRadius.circular(15),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 24,
+            height: 24,
+            decoration: const BoxDecoration(
+              color: AppColors.primary,
+              shape: BoxShape.circle,
+            ),
+            alignment: Alignment.center,
+            child: Text(
+              number,
+              style: const TextStyle(
+                color: AppColors.white,
+                fontSize: 11,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            title,
+            style: const TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w800,
+              color: AppColors.textDark,
+            ),
+          ),
+          const SizedBox(height: 3),
+          Text(
+            description,
+            style: const TextStyle(
+              fontSize: 10.5,
+              height: 1.35,
+              color: AppColors.textSecondary,
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -762,7 +867,9 @@ class _HomeScreenState extends State<HomeScreen> {
       );
     }
 
-    if (_recentReports.isEmpty) {
+    final report = _latestReport;
+
+    if (report == null) {
       return Container(
         width: double.infinity,
         padding: const EdgeInsets.all(20),
@@ -823,119 +930,122 @@ class _HomeScreenState extends State<HomeScreen> {
       );
     }
 
-    return Column(
-      children: _recentReports.map(
-        (report) {
-          return Container(
-            width: double.infinity,
-            margin: const EdgeInsets.only(
-              bottom: 12,
-            ),
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: AppColors.white,
-              borderRadius: BorderRadius.circular(
-                20,
-              ),
-              border: Border.all(
-                color: AppColors.border,
-              ),
-            ),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Container(
-                  width: 44,
-                  height: 44,
-                  decoration: BoxDecoration(
-                    color: AppColors.primaryLight,
-                    borderRadius: BorderRadius.circular(
-                      14,
-                    ),
-                  ),
-                  child: const Icon(
-                    Icons.report_gmailerrorred_outlined,
-                    color: AppColors.primary,
-                    size: 23,
-                  ),
-                ),
-                const SizedBox(
-                  width: 12,
-                ),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        report.incidentType,
-                        style: const TextStyle(
-                          fontSize: 15,
-                          fontWeight: FontWeight.w700,
-                          color: AppColors.textDark,
-                        ),
-                      ),
-                      const SizedBox(
-                        height: 5,
-                      ),
-                      Text(
-                        report.description,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          fontSize: 13,
-                          height: 1.4,
-                          color: AppColors.textSecondary,
-                        ),
-                      ),
-                      const SizedBox(
-                        height: 9,
-                      ),
-                      Row(
-                        children: [
-                          Flexible(
-                            child: Text(
-                              report.referenceNumber,
-                              overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
-                                fontSize: 11.5,
-                                fontWeight: FontWeight.w600,
-                                color: AppColors.textSecondary,
-                              ),
-                            ),
-                          ),
-                          const SizedBox(
-                            width: 8,
-                          ),
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 8,
-                              vertical: 4,
-                            ),
-                            decoration: BoxDecoration(
-                              color: AppColors.safeBackground,
-                              borderRadius: BorderRadius.circular(
-                                20,
-                              ),
-                            ),
-                            child: Text(
-                              report.status,
-                              style: const TextStyle(
-                                fontSize: 10.5,
-                                fontWeight: FontWeight.w700,
-                                color: AppColors.safe,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
+    return Material(
+      color: AppColors.white,
+      borderRadius: BorderRadius.circular(20),
+      child: InkWell(
+        onTap: () {
+          _openScreen(
+            const MyReportsScreen(),
           );
         },
-      ).toList(),
+        borderRadius: BorderRadius.circular(20),
+        child: Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(
+              color: AppColors.border,
+            ),
+          ),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  color: AppColors.primaryLight,
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: const Icon(
+                  Icons.report_gmailerrorred_outlined,
+                  color: AppColors.primary,
+                  size: 23,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Latest report',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.textSecondary,
+                      ),
+                    ),
+                    const SizedBox(height: 3),
+                    Text(
+                      report.incidentType,
+                      style: const TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.textDark,
+                      ),
+                    ),
+                    const SizedBox(height: 5),
+                    Text(
+                      report.description,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontSize: 13,
+                        height: 1.4,
+                        color: AppColors.textSecondary,
+                      ),
+                    ),
+                    const SizedBox(height: 9),
+                    Row(
+                      children: [
+                        Flexible(
+                          child: Text(
+                            report.referenceNumber,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              fontSize: 11.5,
+                              fontWeight: FontWeight.w600,
+                              color: AppColors.textSecondary,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 4,
+                          ),
+                          decoration: BoxDecoration(
+                            color: AppColors.safeBackground,
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: Text(
+                            report.status,
+                            style: const TextStyle(
+                              fontSize: 10.5,
+                              fontWeight: FontWeight.w700,
+                              color: AppColors.safe,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              const Icon(
+                Icons.arrow_forward_rounded,
+                size: 18,
+                color: AppColors.textSecondary,
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 
@@ -966,47 +1076,51 @@ class _HomeScreenState extends State<HomeScreen> {
                 height: 46,
                 decoration: BoxDecoration(
                   color: AppColors.primaryLight,
-                  borderRadius: BorderRadius.circular(
-                    14,
-                  ),
+                  borderRadius: BorderRadius.circular(14),
                 ),
                 child: const Icon(
                   Icons.school_outlined,
                   color: AppColors.primary,
                 ),
               ),
-              const SizedBox(
-                width: 12,
-              ),
+              const SizedBox(width: 12),
               const Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Continue Learning',
+                      'Build your digital safety skills',
                       style: TextStyle(
                         fontSize: 15,
                         fontWeight: FontWeight.w800,
                         color: AppColors.textDark,
                       ),
                     ),
-                    SizedBox(
-                      height: 4,
-                    ),
+                    SizedBox(height: 4),
                     Text(
-                      'Build practical digital safety skills.',
+                      'Explore practical lessons and strengthen your online safety.',
                       style: TextStyle(
                         fontSize: 13,
+                        height: 1.4,
                         color: AppColors.textSecondary,
                       ),
                     ),
                   ],
                 ),
               ),
-              const Icon(
-                Icons.arrow_forward_rounded,
-                size: 18,
-                color: AppColors.textSecondary,
+              const SizedBox(width: 10),
+              Container(
+                width: 34,
+                height: 34,
+                decoration: BoxDecoration(
+                  color: AppColors.primaryLight,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Icon(
+                  Icons.arrow_forward_rounded,
+                  size: 18,
+                  color: AppColors.primary,
+                ),
               ),
             ],
           ),
@@ -1016,9 +1130,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   @override
-  Widget build(
-    BuildContext context,
-  ) {
+  Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.background,
       body: SafeArea(
@@ -1147,7 +1259,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 height: 28,
               ),
               _buildSectionTitle(
-                title: 'Recent Reports',
+                title: 'Recent Report',
                 actionLabel: 'View All',
                 onAction: () {
                   _openScreen(
@@ -1160,7 +1272,19 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
               _buildRecentReports(),
               const SizedBox(
-                height: 16,
+                height: 30,
+              ),
+              _buildSectionTitle(
+                title: 'Continue Learning',
+                actionLabel: 'View All',
+                onAction: () {
+                  _openScreen(
+                    const LearnSecurityScreen(),
+                  );
+                },
+              ),
+              const SizedBox(
+                height: 12,
               ),
               _buildContinueLearning(),
             ],

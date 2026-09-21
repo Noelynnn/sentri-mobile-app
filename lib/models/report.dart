@@ -5,7 +5,7 @@ class Report {
   final String? additionalDetails;
   final String referenceNumber;
   final String status;
-  final String createdAt;
+  final DateTime createdAt;
   final int evidenceCount;
 
   const Report({
@@ -29,7 +29,9 @@ class Report {
       additionalDetails: json['additional_details'] as String?,
       referenceNumber: json['reference_number'] as String,
       status: json['status'] as String,
-      createdAt: json['created_at'].toString(),
+      createdAt: DateTime.parse(
+        json['created_at'] as String,
+      ),
       evidenceCount: json['evidence_count'] as int? ?? 0,
     );
   }

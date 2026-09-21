@@ -75,13 +75,14 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       return path;
     }
 
-    return '${ApiConfig.baseUrl}/'
-        '${path.replaceFirst('/', '')}';
+    return '${ApiConfig.baseUrl}$path';
   }
 
   Future<void> _pickImage() async {
     final image = await _picker.pickImage(
       source: ImageSource.gallery,
+      maxWidth: 1600,
+      maxHeight: 1600,
       imageQuality: 85,
     );
 
@@ -130,13 +131,13 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         imageFilename = _selectedImage!.name;
       }
 
-      Map<String, dynamic> response = await _profileService.updateProfile(
+      var response = await _profileService.updateProfile(
         fullName: fullName,
         imageBytes: imageBytes,
         imageFilename: imageFilename,
       );
 
-      AuthUser updatedUser = AuthUser.fromJson(response);
+      var updatedUser = AuthUser.fromJson(response);
 
       if (_removeCurrentImage && _selectedImage == null) {
         final removedResponse = await _profileService.removeProfileImage();
@@ -193,21 +194,25 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     }
   }
 
-  Widget _buildInitials() {
+  String get _initials {
     final first = _firstNameController.text.trim();
 
     final last = _lastNameController.text.trim();
 
-    String initials = 'U';
-
     if (first.isNotEmpty && last.isNotEmpty) {
-      initials = '${first[0]}${last[0]}'.toUpperCase();
-    } else if (first.isNotEmpty) {
-      initials = first[0].toUpperCase();
+      return '${first[0]}${last[0]}'.toUpperCase();
     }
 
+    if (first.isNotEmpty) {
+      return first[0].toUpperCase();
+    }
+
+    return 'U';
+  }
+
+  Widget _buildInitials() {
     return Text(
-      initials,
+      _initials,
       style: const TextStyle(
         color: AppColors.white,
         fontSize: 32,
@@ -242,8 +247,8 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
           return ClipOval(
             child: Image.memory(
               snapshot.data!,
-              width: 112,
-              height: 112,
+              width: 116,
+              height: 116,
               fit: BoxFit.cover,
             ),
           );
@@ -257,8 +262,9 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       return ClipOval(
         child: Image.network(
           imageUrl,
-          width: 112,
-          height: 112,
+          key: ValueKey(imageUrl),
+          width: 116,
+          height: 116,
           fit: BoxFit.cover,
           loadingBuilder: (
             context,
@@ -271,7 +277,11 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
 
             return _buildInitials();
           },
-          errorBuilder: (context, error, stackTrace) {
+          errorBuilder: (
+            context,
+            error,
+            stackTrace,
+          ) {
             return _buildInitials();
           },
         ),
@@ -288,10 +298,13 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
-        title: const Text('Edit Profile'),
+        title: const Text(
+          'Edit Profile',
+        ),
       ),
       body: SafeArea(
         child: ListView(
+          keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
           padding: const EdgeInsets.fromLTRB(
             20,
             12,
@@ -299,11 +312,17 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
             32,
           ),
           children: [
+            // --------------------------------------------------
+            // Profile picture
+            // --------------------------------------------------
             Container(
+              width: double.infinity,
               padding: const EdgeInsets.all(24),
               decoration: BoxDecoration(
                 color: AppColors.white,
-                borderRadius: BorderRadius.circular(26),
+                borderRadius: BorderRadius.circular(
+                  26,
+                ),
                 border: Border.all(
                   color: AppColors.border,
                 ),
@@ -311,8 +330,8 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
               child: Column(
                 children: [
                   Container(
-                    width: 112,
-                    height: 112,
+                    width: 116,
+                    height: 116,
                     decoration: const BoxDecoration(
                       color: AppColors.primary,
                       shape: BoxShape.circle,
@@ -320,37 +339,41 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                     alignment: Alignment.center,
                     child: _buildProfileImage(),
                   ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 17),
                   const Text(
                     'Profile picture',
                     style: TextStyle(
-                      fontSize: 16,
+                      fontSize: 17,
                       fontWeight: FontWeight.w800,
                       color: AppColors.textDark,
                     ),
                   ),
                   const SizedBox(height: 5),
                   const Text(
-                    'Choose a clear photo that represents you.',
+                    'Use a clear photo that helps personalize your Sentri account.',
                     textAlign: TextAlign.center,
                     style: TextStyle(
                       fontSize: 13,
-                      height: 1.4,
+                      height: 1.45,
                       color: AppColors.textSecondary,
                     ),
                   ),
-                  const SizedBox(height: 14),
-                  OutlinedButton.icon(
-                    onPressed: _isSaving ? null : _pickImage,
-                    icon: const Icon(
-                      Icons.photo_camera_outlined,
-                    ),
-                    label: const Text(
-                      'Change Photo',
+                  const SizedBox(height: 15),
+                  SizedBox(
+                    height: 46,
+                    child: OutlinedButton.icon(
+                      onPressed: _isSaving ? null : _pickImage,
+                      icon: const Icon(
+                        Icons.photo_camera_outlined,
+                        size: 18,
+                      ),
+                      label: const Text(
+                        'Change Photo',
+                      ),
                     ),
                   ),
                   if (hasPhoto) ...[
-                    const SizedBox(height: 2),
+                    const SizedBox(height: 3),
                     TextButton(
                       onPressed: _isSaving ? null : _removeImage,
                       style: TextButton.styleFrom(
@@ -364,12 +387,19 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                 ],
               ),
             ),
+
             const SizedBox(height: 24),
+
+            // --------------------------------------------------
+            // Personal information
+            // --------------------------------------------------
             Container(
-              padding: const EdgeInsets.all(18),
+              padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
                 color: AppColors.white,
-                borderRadius: BorderRadius.circular(22),
+                borderRadius: BorderRadius.circular(
+                  24,
+                ),
                 border: Border.all(
                   color: AppColors.border,
                 ),
@@ -389,7 +419,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                     ),
                     const SizedBox(height: 6),
                     const Text(
-                      'Keep your Sentri account information up to date.',
+                      'Keep your account details up to date.',
                       style: TextStyle(
                         fontSize: 13,
                         height: 1.4,
@@ -398,6 +428,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                     ),
                     const SizedBox(height: 18),
                     Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Expanded(
                           child: TextFormField(
@@ -415,29 +446,39 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                             validator: (value) {
                               final name = value?.trim() ?? '';
 
-                              if (name.length < 2) {
+                              if (name.isEmpty) {
                                 return 'Required';
+                              }
+
+                              if (name.length < 2) {
+                                return 'Too short';
                               }
 
                               return null;
                             },
                           ),
                         ),
-                        const SizedBox(width: 12),
+                        const SizedBox(
+                          width: 12,
+                        ),
                         Expanded(
                           child: TextFormField(
                             controller: _lastNameController,
                             enabled: !_isSaving,
                             textCapitalization: TextCapitalization.words,
-                            textInputAction: TextInputAction.next,
+                            textInputAction: TextInputAction.done,
                             decoration: const InputDecoration(
                               labelText: 'Last Name',
                             ),
                             validator: (value) {
                               final name = value?.trim() ?? '';
 
-                              if (name.length < 2) {
+                              if (name.isEmpty) {
                                 return 'Required';
+                              }
+
+                              if (name.length < 2) {
+                                return 'Too short';
                               }
 
                               return null;
@@ -459,22 +500,40 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                       ),
                     ),
                     const SizedBox(height: 10),
-                    const Text(
-                      'Your email address is currently read-only.',
-                      style: TextStyle(
-                        fontSize: 12,
-                        height: 1.35,
-                        color: AppColors.textSecondary,
-                      ),
+                    const Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Icon(
+                          Icons.info_outline_rounded,
+                          size: 16,
+                          color: AppColors.textSecondary,
+                        ),
+                        SizedBox(width: 7),
+                        Expanded(
+                          child: Text(
+                            'Your email address is currently read-only.',
+                            style: TextStyle(
+                              fontSize: 12,
+                              height: 1.35,
+                              color: AppColors.textSecondary,
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ],
                 ),
               ),
             ),
+
             const SizedBox(height: 24),
+
+            // --------------------------------------------------
+            // Save
+            // --------------------------------------------------
             SizedBox(
               width: double.infinity,
-              height: 52,
+              height: 54,
               child: ElevatedButton(
                 onPressed: _isSaving ? null : _saveProfile,
                 child: _isSaving

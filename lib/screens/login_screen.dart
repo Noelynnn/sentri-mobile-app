@@ -4,6 +4,7 @@ import 'package:sentri/screens/forgot_password_screen.dart';
 import 'package:sentri/screens/register_screen.dart';
 import 'package:sentri/screens/home_screen.dart';
 import 'package:sentri/services/auth_api_service.dart';
+import 'package:sentri/services/auth_storage_service.dart';
 import 'package:sentri/theme/app_colors.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -22,9 +23,11 @@ class _LoginScreenState extends State<LoginScreen> {
   final _passwordController = TextEditingController();
 
   final AuthApiService _authApiService = AuthApiService();
+  final AuthStorageService _authStorageService = AuthStorageService();
 
   bool _obscurePassword = true;
   bool _isLoading = false;
+  bool _rememberMe = false;
 
   @override
   void dispose() {
@@ -49,6 +52,9 @@ class _LoginScreenState extends State<LoginScreen> {
         email: _emailController.text.trim(),
         password: _passwordController.text,
       );
+
+      // Store the user's Remember Me preference.
+      await _authStorageService.saveRememberMe(_rememberMe);
 
       if (!mounted) {
         return;
@@ -113,6 +119,8 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
     return Scaffold(
       backgroundColor: AppColors.background,
       body: SafeArea(
@@ -150,7 +158,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     Text(
                       'Welcome Back',
                       textAlign: TextAlign.center,
-                      style: Theme.of(context).textTheme.displayMedium,
+                      style: theme.textTheme.displayMedium,
                     ),
                     const SizedBox(height: 8),
                     const Text(
@@ -246,17 +254,51 @@ class _LoginScreenState extends State<LoginScreen> {
                             },
                           ),
                           const SizedBox(height: 8),
-                          Align(
-                            alignment: Alignment.centerRight,
-                            child: TextButton(
-                              onPressed:
-                                  _isLoading ? null : _openForgotPassword,
-                              child: const Text(
-                                'Forgot Password?',
+                          Row(
+                            children: [
+                              Expanded(
+                                child: CheckboxListTile(
+                                  value: _rememberMe,
+                                  onChanged: _isLoading
+                                      ? null
+                                      : (value) {
+                                          setState(() {
+                                            _rememberMe = value ?? false;
+                                          });
+                                        },
+                                  contentPadding: EdgeInsets.zero,
+                                  dense: true,
+                                  visualDensity: const VisualDensity(
+                                    horizontal: -3,
+                                    vertical: -2,
+                                  ),
+                                  controlAffinity:
+                                      ListTileControlAffinity.leading,
+                                  title: const Text(
+                                    'Remember me',
+                                    style: TextStyle(
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w600,
+                                      color: AppColors.textDark,
+                                    ),
+                                  ),
+                                ),
                               ),
-                            ),
+                              TextButton(
+                                onPressed:
+                                    _isLoading ? null : _openForgotPassword,
+                                style: TextButton.styleFrom(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 4,
+                                  ),
+                                ),
+                                child: const Text(
+                                  'Forgot Password?',
+                                ),
+                              ),
+                            ],
                           ),
-                          const SizedBox(height: 8),
+                          const SizedBox(height: 12),
                           SizedBox(
                             width: double.infinity,
                             height: 52,

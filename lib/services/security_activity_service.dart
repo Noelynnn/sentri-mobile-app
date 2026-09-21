@@ -31,8 +31,8 @@ class SecurityActivitySummary {
   ) {
     return SecurityActivitySummary(
       score: json['score'] as int? ?? 100,
-      status: json['status'] as String,
-      message: json['message'] as String,
+      status: json['status'] as String? ?? 'No Recent Flags',
+      message: json['message'] as String? ?? '',
       recentHighRisk: json['recent_high_risk'] as bool? ?? false,
       recentSuspicious: json['recent_suspicious'] as bool? ?? false,
       recentHighRiskCount: json['recent_high_risk_count'] as int? ?? 0,
@@ -65,10 +65,21 @@ class SecurityActivity {
       activityType: json['activity_type'] as String,
       riskLevel: json['risk_level'] as String,
       riskScore: json['risk_score'] as int,
-      createdAt: DateTime.parse(
+      createdAt: _parseUtcDateTime(
         json['created_at'] as String,
       ),
     );
+  }
+
+  static DateTime _parseUtcDateTime(String value) {
+    final hasTimezone =
+        value.endsWith('Z') || RegExp(r'[+-]\d{2}:\d{2}$').hasMatch(value);
+
+    if (hasTimezone) {
+      return DateTime.parse(value).toLocal();
+    }
+
+    return DateTime.parse('${value}Z').toLocal();
   }
 }
 
@@ -78,10 +89,16 @@ class SecurityActivityService {
   Future<SecurityActivitySummary> getSummary() async {
     final token = await _getToken();
 
+    final uri = Uri.parse(
+      '${ApiConfig.baseUrl}/api/activity/summary',
+    ).replace(
+      queryParameters: {
+        '_': DateTime.now().millisecondsSinceEpoch.toString(),
+      },
+    );
+
     final response = await http.get(
-      Uri.parse(
-        '${ApiConfig.baseUrl}/api/activity/summary',
-      ),
+      uri,
       headers: _headers(token),
     );
 
@@ -149,6 +166,8 @@ class SecurityActivityService {
     return {
       'Authorization': 'Bearer $token',
       'Content-Type': 'application/json',
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      'Pragma': 'no-cache',
     };
   }
 
