@@ -89,15 +89,72 @@ class AuthApiService {
       );
 
       if (response.statusCode == 200) {
-        final Map<String, dynamic> data = jsonDecode(response.body);
+        final Map<String, dynamic> data = jsonDecode(
+          response.body,
+        );
 
-        final authResponse = AuthResponse.fromJson(data);
+        final authResponse = AuthResponse.fromJson(
+          data,
+        );
 
         await _storageService.saveToken(
           authResponse.accessToken,
         );
 
         return authResponse;
+      }
+
+      throw ApiException(
+        _extractErrorMessage(response),
+        statusCode: response.statusCode,
+      );
+    } on ApiException {
+      rethrow;
+    } on http.ClientException {
+      throw const ApiException(
+        'Unable to connect to the Sentri server. '
+        'Please make sure the backend is running.',
+      );
+    } on FormatException {
+      throw const ApiException(
+        'The server returned an invalid response.',
+      );
+    } catch (e) {
+      throw ApiException(
+        'Something went wrong: $e',
+      );
+    }
+  }
+
+  Future<AuthUser> getCurrentUser() async {
+    final token = await _storageService.getToken();
+
+    if (token == null || token.isEmpty) {
+      throw const ApiException(
+        'Your session has expired. Please log in again.',
+      );
+    }
+
+    final url = Uri.parse(
+      '${ApiConfig.baseUrl}/api/auth/me',
+    );
+
+    try {
+      final response = await http.get(
+        url,
+        headers: {
+          'Authorization': 'Bearer $token',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> data = jsonDecode(
+          response.body,
+        );
+
+        return AuthUser.fromJson(
+          data,
+        );
       }
 
       throw ApiException(
@@ -134,7 +191,9 @@ class AuthApiService {
     http.Response response,
   ) {
     try {
-      final Map<String, dynamic> data = jsonDecode(response.body);
+      final Map<String, dynamic> data = jsonDecode(
+        response.body,
+      );
 
       final detail = data['detail'];
 

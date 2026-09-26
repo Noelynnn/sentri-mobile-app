@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 
-import 'package:sentri/services/auth_api_service.dart';
+import '../services/auth_api_service.dart';
+import '../services/auth_storage_service.dart';
 
-import 'package:sentri/theme/app_colors.dart';
+import '../theme/app_colors.dart';
 
 import 'login_screen.dart';
 
@@ -25,6 +26,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final _confirmPasswordController = TextEditingController();
 
   final AuthApiService _authApiService = AuthApiService();
+  final AuthStorageService _authStorageService = AuthStorageService();
 
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
@@ -61,6 +63,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
         fullName: fullName,
         email: _emailController.text.trim(),
         password: _passwordController.text,
+      );
+
+      await _authStorageService.saveUserName(
+        fullName,
       );
 
       if (!mounted) {

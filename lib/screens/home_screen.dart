@@ -971,7 +971,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     const Text(
-                      'Latest report',
+                      'Latest reports',
                       style: TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.w700,
@@ -1259,7 +1259,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 height: 28,
               ),
               _buildSectionTitle(
-                title: 'Recent Report',
+                title: 'Recent Reports',
                 actionLabel: 'View All',
                 onAction: () {
                   _openScreen(

@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 
-import 'package:sentri/screens/splash_screen.dart';
+import 'package:sentri/screens/startup_gate.dart';
 import 'package:sentri/theme/app_theme.dart';
 
 void main() {
+  WidgetsFlutterBinding.ensureInitialized();
+
   runApp(const MyApp());
 }
 
@@ -18,7 +20,7 @@ class MyApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       title: 'Sentri',
       theme: AppTheme.light,
-      home: const SplashScreen(),
+      home: const StartupGate(),
     );
   }
 }

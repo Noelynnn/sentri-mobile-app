@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
 
-import 'package:sentri/screens/forgot_password_screen.dart';
-import 'package:sentri/screens/register_screen.dart';
-import 'package:sentri/screens/home_screen.dart';
-import 'package:sentri/services/auth_api_service.dart';
-import 'package:sentri/services/auth_storage_service.dart';
-import 'package:sentri/theme/app_colors.dart';
+import '../screens/admin_dashboard_screen.dart';
+import '../screens/forgot_password_screen.dart';
+import '../screens/register_screen.dart';
+import '../screens/home_screen.dart';
+
+import '../services/auth_api_service.dart';
+import '../services/auth_storage_service.dart';
+
+import '../theme/app_colors.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({
@@ -53,21 +56,37 @@ class _LoginScreenState extends State<LoginScreen> {
         password: _passwordController.text,
       );
 
-      // Store the user's Remember Me preference.
-      await _authStorageService.saveRememberMe(_rememberMe);
+      await _authStorageService.saveRememberMe(
+        _rememberMe,
+      );
+
+      await _authStorageService.saveUserName(
+        response.user.fullName,
+      );
 
       if (!mounted) {
         return;
       }
 
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(
-          builder: (_) => HomeScreen(
-            userName: response.user.fullName,
+      if (response.user.isAdmin) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (_) => AdminDashboardScreen(
+              user: response.user,
+            ),
           ),
-        ),
-      );
+        );
+      } else {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (_) => HomeScreen(
+              userName: response.user.fullName,
+            ),
+          ),
+        );
+      }
     } on ApiException catch (e) {
       if (!mounted) {
         return;

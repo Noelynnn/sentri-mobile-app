@@ -3,6 +3,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 class AuthStorageService {
   static const String _tokenKey = 'access_token';
   static const String _rememberMeKey = 'remember_me';
+  static const String _userNameKey = 'user_name';
 
   final FlutterSecureStorage _storage = const FlutterSecureStorage();
 
@@ -40,13 +41,20 @@ class AuthStorageService {
     return value == 'true';
   }
 
-  Future<void> deleteRememberMe() async {
-    await _storage.delete(
-      key: _rememberMeKey,
+  Future<void> saveUserName(String fullName) async {
+    await _storage.write(
+      key: _userNameKey,
+      value: fullName.trim(),
     );
   }
 
-  Future<void> clearAuthData() async {
+  Future<String?> getUserName() async {
+    return await _storage.read(
+      key: _userNameKey,
+    );
+  }
+
+  Future<void> clearSession() async {
     await _storage.delete(
       key: _tokenKey,
     );

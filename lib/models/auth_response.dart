@@ -4,6 +4,7 @@ class AuthUser {
   final String email;
   final String createdAt;
   final String? profileImagePath;
+  final String role;
 
   const AuthUser({
     required this.id,
@@ -11,7 +12,10 @@ class AuthUser {
     required this.email,
     required this.createdAt,
     this.profileImagePath,
+    required this.role,
   });
+
+  bool get isAdmin => role == 'admin';
 
   factory AuthUser.fromJson(
     Map<String, dynamic> json,
@@ -22,6 +26,7 @@ class AuthUser {
       email: json['email'] as String,
       createdAt: json['created_at'].toString(),
       profileImagePath: json['profile_image_path']?.toString(),
+      role: json['role']?.toString() ?? 'user',
     );
   }
 }

@@ -2,6 +2,7 @@ import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../models/report.dart';
 import '../services/auth_api_service.dart';
@@ -152,6 +153,53 @@ class _ReportCrimeScreenState extends State<ReportCrimeScreen> {
           _isLoading = false;
         });
       }
+    }
+  }
+
+  Future<void> _openOfficialReportPage() async {
+    final uri = Uri.parse(
+      'https://ke-cirt.go.ke/report-an-incident/',
+    );
+
+    final launched = await launchUrl(
+      uri,
+      mode: LaunchMode.externalApplication,
+    );
+
+    if (!launched && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          behavior: SnackBarBehavior.floating,
+          content: Text(
+            'Unable to open the KE-CIRT/CC reporting page. '
+            'Please try again or use the contact details below.',
+          ),
+        ),
+      );
+    }
+  }
+
+  Future<void> _contactKeCirt() async {
+    final uri = Uri(
+      scheme: 'mailto',
+      path: 'incidents@ke-cirt.go.ke',
+      queryParameters: {
+        'subject': 'Cybercrime incident report',
+      },
+    );
+
+    final launched = await launchUrl(uri);
+
+    if (!launched && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          behavior: SnackBarBehavior.floating,
+          content: Text(
+            'Unable to open your email app. '
+            'You can contact KE-CIRT/CC at incidents@ke-cirt.go.ke.',
+          ),
+        ),
+      );
     }
   }
 
@@ -760,7 +808,7 @@ class _ReportCrimeScreenState extends State<ReportCrimeScreen> {
               ),
               const SizedBox(height: 14),
               const Text(
-                'Report submitted',
+                'Report submitted to Sentri',
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   fontSize: 21,
@@ -770,7 +818,9 @@ class _ReportCrimeScreenState extends State<ReportCrimeScreen> {
               ),
               const SizedBox(height: 7),
               const Text(
-                'Your report has been recorded successfully.',
+                'Your report has been recorded successfully. '
+                'For official incident handling, you can submit the '
+                'incident to the National KE-CIRT/CC.',
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   fontSize: 13.5,
@@ -810,14 +860,10 @@ class _ReportCrimeScreenState extends State<ReportCrimeScreen> {
               const SizedBox(height: 18),
               Container(
                 width: double.infinity,
-                padding: const EdgeInsets.all(
-                  13,
-                ),
+                padding: const EdgeInsets.all(13),
                 decoration: BoxDecoration(
                   color: AppColors.white,
-                  borderRadius: BorderRadius.circular(
-                    14,
-                  ),
+                  borderRadius: BorderRadius.circular(14),
                 ),
                 child: const Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -830,7 +876,8 @@ class _ReportCrimeScreenState extends State<ReportCrimeScreen> {
                     SizedBox(width: 8),
                     Expanded(
                       child: Text(
-                        'Keep your reference number for future follow-up.',
+                        'Keep your Sentri reference number and your original evidence '
+                        'for future follow-up.',
                         style: TextStyle(
                           fontSize: 12.5,
                           height: 1.4,
@@ -839,6 +886,96 @@ class _ReportCrimeScreenState extends State<ReportCrimeScreen> {
                       ),
                     ),
                   ],
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 16),
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(18),
+          decoration: BoxDecoration(
+            color: AppColors.white,
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(
+              color: AppColors.border,
+            ),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Row(
+                children: [
+                  Icon(
+                    Icons.account_balance_outlined,
+                    color: AppColors.primary,
+                    size: 22,
+                  ),
+                  SizedBox(width: 9),
+                  Expanded(
+                    child: Text(
+                      'Next step: official reporting',
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w800,
+                        color: AppColors.textDark,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              const Text(
+                'Sentri has recorded your report, but this does not mean '
+                'it has been filed with a government authority. '
+                'For official incident reporting in Kenya, use the '
+                'National KE-CIRT/CC reporting channel.',
+                style: TextStyle(
+                  fontSize: 12.5,
+                  height: 1.5,
+                  color: AppColors.textSecondary,
+                ),
+              ),
+              const SizedBox(height: 14),
+              SizedBox(
+                width: double.infinity,
+                height: 50,
+                child: ElevatedButton.icon(
+                  onPressed: _openOfficialReportPage,
+                  icon: const Icon(
+                    Icons.open_in_new_rounded,
+                    size: 19,
+                  ),
+                  label: const Text(
+                    'Report to KE-CIRT/CC',
+                  ),
+                ),
+              ),
+              const SizedBox(height: 10),
+              SizedBox(
+                width: double.infinity,
+                height: 46,
+                child: OutlinedButton.icon(
+                  onPressed: _contactKeCirt,
+                  icon: const Icon(
+                    Icons.email_outlined,
+                    size: 19,
+                  ),
+                  label: const Text(
+                    'Email KE-CIRT/CC',
+                  ),
+                ),
+              ),
+              const SizedBox(height: 10),
+              const Text(
+                'KE-CIRT/CC: incidents@ke-cirt.go.ke  •  '
+                '+254 703 042700  •  +254 730 172700',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 11.5,
+                  height: 1.45,
+                  color: AppColors.textSecondary,
                 ),
               ),
             ],

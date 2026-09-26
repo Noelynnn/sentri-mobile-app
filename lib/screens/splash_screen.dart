@@ -86,8 +86,12 @@ class _SplashScreenState extends State<SplashScreen>
     Navigator.pushReplacement(
       context,
       PageRouteBuilder(
-        transitionDuration: const Duration(milliseconds: 550),
-        reverseTransitionDuration: const Duration(milliseconds: 350),
+        transitionDuration: const Duration(
+          milliseconds: 550,
+        ),
+        reverseTransitionDuration: const Duration(
+          milliseconds: 350,
+        ),
         pageBuilder: (
           context,
           animation,
@@ -207,21 +211,15 @@ class _SplashScreenState extends State<SplashScreen>
                             width: 116,
                             height: 116,
                             decoration: BoxDecoration(
-                              color: AppColors.white.withOpacity(
-                                0.10,
-                              ),
+                              color: AppColors.white.withOpacity(0.10),
                               shape: BoxShape.circle,
                               border: Border.all(
-                                color: AppColors.white.withOpacity(
-                                  0.18,
-                                ),
+                                color: AppColors.white.withOpacity(0.18),
                                 width: 1.5,
                               ),
                               boxShadow: [
                                 BoxShadow(
-                                  color: AppColors.white.withOpacity(
-                                    0.10,
-                                  ),
+                                  color: AppColors.white.withOpacity(0.10),
                                   blurRadius: 34,
                                   spreadRadius: 3,
                                 ),
@@ -254,9 +252,7 @@ class _SplashScreenState extends State<SplashScreen>
                           'Your Digital Safety Companion',
                           textAlign: TextAlign.center,
                           style: TextStyle(
-                            color: AppColors.white.withOpacity(
-                              0.78,
-                            ),
+                            color: AppColors.white.withOpacity(0.78),
                             fontSize: 15,
                             fontWeight: FontWeight.w500,
                             letterSpacing: 0.3,
@@ -269,15 +265,11 @@ class _SplashScreenState extends State<SplashScreen>
                           width: 150,
                           child: LinearProgressIndicator(
                             minHeight: 3,
-                            backgroundColor: AppColors.white.withOpacity(
-                              0.12,
-                            ),
+                            backgroundColor: AppColors.white.withOpacity(0.12),
                             valueColor: const AlwaysStoppedAnimation<Color>(
                               AppColors.white,
                             ),
-                            borderRadius: BorderRadius.circular(
-                              10,
-                            ),
+                            borderRadius: BorderRadius.circular(10),
                           ),
                         ),
                         const SizedBox(
@@ -286,9 +278,7 @@ class _SplashScreenState extends State<SplashScreen>
                         Text(
                           'Securing your digital space...',
                           style: TextStyle(
-                            color: AppColors.white.withOpacity(
-                              0.58,
-                            ),
+                            color: AppColors.white.withOpacity(0.58),
                             fontSize: 11.5,
                           ),
                         ),
